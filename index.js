@@ -124,7 +124,12 @@ async function scanZipFile(filePath) {
                     .exec({
                       task: async ({ sourcePath, destPath }) => {
                         // ==================== Thread Scope ====================
-                        const cost = await require('./local-resize')(
+                        // const cost = await require('./local-resize')(
+                        //   sourcePath,
+                        //   destPath
+                        // )
+
+                        const cost = await require('./rpc-resize')(
                           sourcePath,
                           destPath
                         )

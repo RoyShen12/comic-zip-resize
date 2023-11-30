@@ -10,7 +10,7 @@ module.exports = async function (sourcePath, destPath) {
   const req = axon.socket('req')
 
   const client = new rpc.Client(req)
-  req.connect(4000)
+  req.connect(4000, '192.168.50.59')
 
   return await new Promise((res, rej) => {
     client.call('resize', fs.readFileSync(sourcePath), function (err, ret) {

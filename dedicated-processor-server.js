@@ -32,3 +32,5 @@ server.expose('resize', async function (imgBuffer, fn) {
     fn(error)
   }
 })
+
+console.log('server online')
