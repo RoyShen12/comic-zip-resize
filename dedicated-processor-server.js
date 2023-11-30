@@ -15,15 +15,21 @@ rep.bind(4000, '0.0.0.0')
 
 const SHARP_RATIO = 0.5
 
+let index = 0
+
 server.expose('resize', async (imgBuffer, fn) => {
+  index++
   try {
-    console.log('resize.buf', imgBuffer)
+    console.log(`[${index}] resize.buf`, imgBuffer)
 
     const jimpInst = await Jimp.read(imgBuffer)
+    console.log(`[${index}] jimpInst created`)
     const resultBuffer = await jimpInst
       .scale(SHARP_RATIO)
       .quality(80)
       .getBufferAsync(Jimp.MIME_JPEG)
+
+    console.log(`[${index}] resultBuffer resized finish`)
 
     fn(null, resultBuffer)
   } catch (error) {

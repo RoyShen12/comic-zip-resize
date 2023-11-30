@@ -2,8 +2,15 @@
  * @param {string} sourcePath
  * @param {string} destPath
  */
-module.exports = async function (sourcePath, destPath, client) {
+module.exports = async function (sourcePath, destPath) {
   const fs = require('fs')
+
+  const rpc = require('axon-rpc')
+  const axon = require('axon')
+  const req = axon.socket('req')
+
+  const client = new rpc.Client(req)
+  req.connect(4000, '192.168.50.59')
 
   return await new Promise((res, rej) => {
     const s = process.hrtime.bigint()
@@ -12,7 +19,6 @@ module.exports = async function (sourcePath, destPath, client) {
       if (err) rej(err)
 
       console.log('rpc.client.ret', ret)
-      console.log('arguments', ...arguments)
 
       fs.writeFileSync(destPath, ret)
 

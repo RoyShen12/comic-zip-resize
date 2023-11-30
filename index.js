@@ -11,13 +11,6 @@ const yauzl = require('yauzl')
 const { v4: uuidV4 } = require('uuid')
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const rpc = require('axon-rpc')
-const axon = require('axon')
-const req = axon.socket('req')
-
-const client = new rpc.Client(req)
-req.connect(4000, '192.168.50.59')
-
 const utils = require('./util')
 
 const dynamicPool = new DynamicPool(os.cpus().length - 1)
@@ -129,7 +122,7 @@ async function scanZipFile(filePath) {
                   // thread
                   dynamicPool
                     .exec({
-                      task: async ({ sourcePath, destPath, client }) => {
+                      task: async ({ sourcePath, destPath }) => {
                         // ==================== Thread Scope ====================
                         // const cost = await require('./local-resize')(
                         //   sourcePath,
@@ -138,8 +131,7 @@ async function scanZipFile(filePath) {
 
                         const cost = await require('./rpc-resize')(
                           sourcePath,
-                          destPath,
-                          client
+                          destPath
                         )
 
                         const fsModule = require('fs')
@@ -153,7 +145,6 @@ async function scanZipFile(filePath) {
                       param: {
                         sourcePath: entryWritePath,
                         destPath: resizedPath,
-                        client,
                       },
                     })
                     .then((cost) => {
