@@ -236,7 +236,11 @@ async function scanZipFile(filePath) {
 
     await new Promise((res, rej) => {
       const output = createWriteStream(fileLowQualityPath)
-      const archive = archiver('zip')
+      const archive = archiver('zip', {
+        zlib: {
+          level: 0,
+        },
+      })
 
       output.on('close', function () {
         console.log(
