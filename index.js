@@ -214,13 +214,14 @@ async function scanZipFile(filePath) {
                         isLocal
                           ? chalk.magentaBright('L ')
                           : chalk.cyanBright('R' + getPool.remoteIndex)
-                      }] ${chalk.greenBright(
-                        'resizing file'
-                      )} (${processedEntry}/${entryCount}) ${path.basename(
-                        filePath
-                      )}/${entry.fileName} cost: ${chalk.yellowBright(
-                        cost.toFixed(3)
-                      )} sec`
+                      }] ${chalk.greenBright('resizing file')} (${String(
+                        processedEntry
+                      ).padStart(3, ' ')}/${String(entryCount).padStart(
+                        3,
+                        ' '
+                      )}) ${path.basename(filePath)}/${
+                        entry.fileName
+                      } cost: ${chalk.yellowBright(cost.toFixed(3))} sec`
                     )
 
                     if (processedEntry >= entryCount) {
