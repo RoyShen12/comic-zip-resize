@@ -54,22 +54,22 @@ async function scanDirectory(pathParam) {
   console.log(`scan dir: ${chalk.blueBright(pathParam)}`)
   const subFiles = await fs.readdir(pathParam)
 
-  await Promise.all(
-    subFiles.map(async (subFile) => {
-      const subPath = path.resolve(pathParam, subFile)
-      const subStat = await fs.stat(subPath)
+  for (const subFile of subFiles) {
+    const subPath = path.resolve(pathParam, subFile)
+    const subStat = await fs.stat(subPath)
 
-      if (subStat.isDirectory()) {
-        return await scanDirectory(subPath)
-      } else if (
-        subStat.isFile() &&
-        !subStat.isSymbolicLink() &&
-        subFile.endsWith('.zip')
-      ) {
-        return await scanZipFile(subPath)
-      }
-    })
-  )
+    if (subStat.isDirectory()) {
+      return await scanDirectory(subPath)
+    } else if (
+      subStat.isFile() &&
+      !subStat.isSymbolicLink() &&
+      subFile.endsWith('.zip')
+    ) {
+      return await scanZipFile(subPath)
+    }
+  }
+
+  // await Promise.all(subFiles.map(async (subFile) => {}))
 }
 
 let fileIndex = 0
