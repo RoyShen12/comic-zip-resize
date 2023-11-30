@@ -3,6 +3,8 @@
  * @param {string} destPath
  */
 module.exports = async function (sourcePath, destPath) {
+  const s = process.hrtime.bigint()
+
   const fs = require('fs')
 
   const rpc = require('axon-rpc')
@@ -13,12 +15,8 @@ module.exports = async function (sourcePath, destPath) {
   req.connect(4000, '192.168.50.59')
 
   return await new Promise((res, rej) => {
-    const s = process.hrtime.bigint()
-
     client.call('resize', fs.readFileSync(sourcePath), (err, ret) => {
       if (err) rej(err)
-
-      console.log('rpc.client.ret', ret)
 
       fs.writeFileSync(destPath, Buffer.from(ret.data))
 

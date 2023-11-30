@@ -20,10 +20,10 @@ let index = 0
 server.expose('resize', async (imgBuffer, fn) => {
   index++
   try {
-    console.log(`[${index}] resize.buf`, imgBuffer)
+    // console.log(`[${index}] resize.buf`, imgBuffer)
 
     const jimpInst = await Jimp.read(Buffer.from(imgBuffer.data))
-    console.log(`[${index}] jimpInst created`)
+
     const resultBuffer = await jimpInst
       .scale(SHARP_RATIO)
       .quality(80)
@@ -33,21 +33,9 @@ server.expose('resize', async (imgBuffer, fn) => {
 
     fn(null, resultBuffer)
   } catch (error) {
+    console.log(`[${index}] throw error`)
     fn(error)
   }
 })
-
-// server.expose('resize', (imgBuffer, fn) => {
-//   index++
-//   try {
-//     console.log(`[${index}] resize.buf`, imgBuffer)
-
-//     console.log(`[${index}] resultBuffer resized finish`)
-
-//     fn(null, imgBuffer)
-//   } catch (error) {
-//     fn(error)
-//   }
-// })
 
 console.log('server online')
