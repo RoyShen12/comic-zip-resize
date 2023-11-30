@@ -10,12 +10,12 @@ module.exports = {
     Local: 1,
     Remote: 2,
   },
-  imgReadWithRetry(source, maxRetries = 5) {
+  async imgReadWithRetry(source, maxRetries = 5) {
     let retries = 0
 
     while (retries < maxRetries) {
       try {
-        return Jimp.read(source)
+        return await Jimp.read(source)
       } catch (error) {
         console.error(error)
         retries++
@@ -25,15 +25,18 @@ module.exports = {
 
     throw new Error('jimp.read max retries')
   },
-  imgScaleWithRetry(jimpInst, writeDestPath, maxRetries = 5) {
+  async imgScaleWithRetry(jimpInst, writeDestPath, maxRetries = 5) {
     const SHARP_RATIO = 0.5
     let retries = 0
 
     while (retries < maxRetries) {
       try {
         return Boolean(writeDestPath)
-          ? jimpInst.scale(SHARP_RATIO).quality(80).writeAsync(writeDestPath)
-          : jimpInst
+          ? await jimpInst
+              .scale(SHARP_RATIO)
+              .quality(80)
+              .writeAsync(writeDestPath)
+          : await jimpInst
               .scale(SHARP_RATIO)
               .quality(80)
               .getBufferAsync(Jimp.MIME_JPEG)
