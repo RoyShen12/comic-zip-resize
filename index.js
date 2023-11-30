@@ -140,16 +140,24 @@ async function scanZipFile(filePath) {
                   return
                 }
 
-                const entryWriteStream = createWriteStream(entryWritePath)
+                const entryWriteStream = createWriteStream(entryWritePath, {
+                  highWaterMark: 1024 * 1024 * 4,
+                })
 
-                entryWriteStream.on('finish', function () {
+                entryWriteStream.on('finish', () => {
                   zipFile.readEntry()
 
-                  // thread
-                  const getPool = randomDispatcher()
-                  const isLocal = getPool.mark === ResizeMachine.Local
-                  getPool.pool
-                    .exec({
+                  entryWriteStream.close(async (err) => {
+                    if (err) {
+                      rej(err)
+                      return
+                    }
+
+                    // thread
+                    const getPool = randomDispatcher()
+                    const isLocal = getPool.mark === ResizeMachine.Local
+
+                    const cost = await getPool.pool.exec({
                       task: isLocal
                         ? async ({ sourcePath, destPath }) => {
                             // ==================== Thread Scope ====================
@@ -188,25 +196,26 @@ async function scanZipFile(filePath) {
                         ip: getPool.ip,
                       },
                     })
-                    .then((cost) => {
-                      processedEntry++
-                      console.log(
-                        `[${
-                          isLocal
-                            ? chalk.magentaBright('L ')
-                            : chalk.cyanBright('R' + getPool.remoteIndex)
-                        }] ${chalk.greenBright(
-                          'resizing file'
-                        )} (${processedEntry}/${entryCount}) ${path.basename(
-                          filePath
-                        )}/${entry.fileName} cost: ${chalk.yellowBright(
-                          cost.toFixed(3)
-                        )} sec`
-                      )
-                      if (processedEntry >= entryCount) {
-                        res()
-                      }
-                    })
+
+                    processedEntry++
+                    console.log(
+                      `[${
+                        isLocal
+                          ? chalk.magentaBright('L ')
+                          : chalk.cyanBright('R' + getPool.remoteIndex)
+                      }] ${chalk.greenBright(
+                        'resizing file'
+                      )} (${processedEntry}/${entryCount}) ${path.basename(
+                        filePath
+                      )}/${entry.fileName} cost: ${chalk.yellowBright(
+                        cost.toFixed(3)
+                      )} sec`
+                    )
+
+                    if (processedEntry >= entryCount) {
+                      res()
+                    }
+                  })
                 })
 
                 readStream.pipe(entryWriteStream)
