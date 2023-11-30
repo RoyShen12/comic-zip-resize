@@ -16,7 +16,7 @@ module.exports = async function (sourcePath, destPath, ip) {
 
   return await new Promise((res, rej) => {
     client.call('resize', fs.readFileSync(sourcePath), (err, ret) => {
-      if (err) rej(err)
+      if (err || !ret) rej(err)
 
       fs.writeFileSync(destPath, Buffer.from(ret.data))
 
