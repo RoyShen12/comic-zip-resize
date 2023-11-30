@@ -122,7 +122,7 @@ async function scanZipFile(filePath) {
                   // thread
                   dynamicPool
                     .exec({
-                      task: async ({ sourcePath, destPath }) => {
+                      task: async ({ sourcePath, destPath, ip }) => {
                         // ==================== Thread Scope ====================
                         // const cost = await require('./local-resize')(
                         //   sourcePath,
@@ -131,7 +131,8 @@ async function scanZipFile(filePath) {
 
                         const cost = await require('./rpc-resize')(
                           sourcePath,
-                          destPath
+                          destPath,
+                          ip
                         )
 
                         const fsModule = require('fs')
@@ -145,6 +146,7 @@ async function scanZipFile(filePath) {
                       param: {
                         sourcePath: entryWritePath,
                         destPath: resizedPath,
+                        ip: '192.168.50.59',
                       },
                     })
                     .then((cost) => {
