@@ -140,7 +140,9 @@ async function scanZipFile(filePath) {
                   return
                 }
 
-                readStream.on('end', function () {
+                const entryWriteStream = createWriteStream(entryWritePath)
+
+                entryWriteStream.on('finish', function () {
                   zipFile.readEntry()
 
                   // thread
@@ -207,7 +209,7 @@ async function scanZipFile(filePath) {
                     })
                 })
 
-                readStream.pipe(createWriteStream(entryWritePath))
+                readStream.pipe(entryWriteStream)
               })
             }
           })
