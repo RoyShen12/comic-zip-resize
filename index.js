@@ -161,6 +161,8 @@ async function scanZipFile(filePath) {
                       return
                     }
 
+                    const sourceSize = (await fs.stat(entryWritePath)).size
+
                     // thread
                     const getPool = randomDispatcher()
                     const isLocal = getPool.mark === ResizeMachine.Local
@@ -195,6 +197,8 @@ async function scanZipFile(filePath) {
                       },
                     })
 
+                    const processSpeed = sourceSize / cost / 1024
+
                     processedEntry++
                     console.log(
                       `<${String(thisIndex).padStart(
@@ -211,7 +215,11 @@ async function scanZipFile(filePath) {
                         ' '
                       )}) ${path.basename(filePath)}/${
                         entry.fileName
-                      } cost: ${chalk.yellowBright(cost.toFixed(3))} sec`
+                      } cost: ${chalk.yellowBright(
+                        cost.toFixed(3)
+                      )} sec, speed: ${chalk.redBright(
+                        processSpeed.toFixed(1)
+                      )} K/s`
                     )
 
                     if (processedEntry >= entryCount) {
