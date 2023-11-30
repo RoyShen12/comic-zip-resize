@@ -20,7 +20,7 @@ module.exports = async function (sourcePath, destPath) {
 
       console.log('rpc.client.ret', ret)
 
-      fs.writeFileSync(destPath, ret)
+      fs.writeFileSync(destPath, Buffer.from(ret.data))
 
       const cost = Number(process.hrtime.bigint() - s) / 1e9
 
