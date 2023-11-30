@@ -22,6 +22,7 @@ module.exports = {
               .quality(80)
               .getBufferAsync(Jimp.MIME_JPEG)
       } catch (error) {
+        console.error(error)
         retries++
         continue
       }
