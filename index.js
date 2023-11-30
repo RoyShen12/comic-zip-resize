@@ -21,7 +21,7 @@ Jimp.decoders['image/jpeg'] = (data) =>
 const utils = require('./util')
 const { ResizeMachine } = utils
 
-const localThreadsCount = os.cpus().length - 1
+const localThreadsCount = os.cpus().length - 2
 const { remoteServer } = require('./config')
 const localDynamicPool = new DynamicPool(localThreadsCount)
 const remoteDynamicPools = remoteServer.map(
