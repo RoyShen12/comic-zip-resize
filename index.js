@@ -268,4 +268,5 @@ async function scanZipFile(filePath) {
 
 scanDirectory(workingDir).then(() => {
   localDynamicPool.destroy()
+  remoteDynamicPools.forEach((p) => p.destroy())
 })
