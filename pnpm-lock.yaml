@@ -20,6 +20,9 @@ dependencies:
   jimp:
     specifier: ^0.22.10
     version: 0.22.10
+  jpeg-js:
+    specifier: ^0.4.4
+    version: 0.4.4
   node-worker-threads-pool:
     specifier: ^1.5.1
     version: 1.5.1

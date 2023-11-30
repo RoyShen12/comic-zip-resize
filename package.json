@@ -15,6 +15,7 @@
     "axon-rpc": "^0.0.3",
     "chalk": "4",
     "jimp": "^0.22.10",
+    "jpeg-js": "^0.4.4",
     "node-worker-threads-pool": "^1.5.1",
     "uuid": "^9.0.1",
     "yauzl": "^2.10.0"
