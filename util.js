@@ -1,8 +1,11 @@
 const chalk = require('chalk')
 const Jimp = require('jimp')
 const JPEG = require('jpeg-js')
+
+const { SHARP_RATIO, MAX_RETRY, JPEG_MAX_MEM } = require('./config')
+
 Jimp.decoders['image/jpeg'] = (data) =>
-  JPEG.decode(data, { maxMemoryUsageInMB: 1024 })
+  JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
 
 module.exports = {
   quit: function (msg = 'error & quit', code = 2) {
@@ -13,7 +16,7 @@ module.exports = {
     Local: 1,
     Remote: 2,
   },
-  async imgReadWithRetry(source, maxRetries = 5) {
+  async imgReadWithRetry(source, maxRetries = MAX_RETRY) {
     let retries = 0
 
     while (retries < maxRetries) {
@@ -28,8 +31,7 @@ module.exports = {
 
     throw new Error('jimp.read max retries')
   },
-  async imgScaleWithRetry(jimpInst, writeDestPath, maxRetries = 5) {
-    const SHARP_RATIO = 0.5
+  async imgScaleWithRetry(jimpInst, writeDestPath, maxRetries = MAX_RETRY) {
     let retries = 0
 
     while (retries < maxRetries) {

@@ -11,10 +11,12 @@ const yauzl = require('yauzl')
 const { v4: uuidV4 } = require('uuid')
 const { DynamicPool } = require('node-worker-threads-pool')
 
+const { JPEG_MAX_MEM } = require('./config')
+
 const JPEG = require('jpeg-js')
 const Jimp = require('jimp')
 Jimp.decoders['image/jpeg'] = (data) =>
-  JPEG.decode(data, { maxMemoryUsageInMB: 1024 })
+  JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
 
 const utils = require('./util')
 const { ResizeMachine } = utils
