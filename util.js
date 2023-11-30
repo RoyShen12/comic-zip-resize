@@ -1,6 +1,12 @@
 const chalk = require('chalk')
 const Jimp = require('jimp')
 
+const cachedJpegDecoder = Jimp.decoders['image/jpeg']
+Jimp.decoders['image/jpeg'] = (data) => {
+  const userOpts = { maxMemoryUsageInMB: 1024 }
+  return cachedJpegDecoder(data, userOpts)
+}
+
 module.exports = {
   quit: function (msg = 'error & quit', code = 2) {
     console.log(chalk.redBright(msg))
