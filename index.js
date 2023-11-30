@@ -174,11 +174,6 @@ async function scanZipFile(filePath) {
                               destPath
                             )
 
-                            const fsModule = require('fs')
-                            const fs = fsModule.promises
-
-                            await fs.rm(sourcePath)
-
                             return cost
                             // ==================== End Thread Scope ====================
                           }
@@ -189,11 +184,6 @@ async function scanZipFile(filePath) {
                               destPath,
                               ip
                             )
-
-                            const fsModule = require('fs')
-                            const fs = fsModule.promises
-
-                            await fs.rm(sourcePath)
 
                             return cost
                             // ==================== End Thread Scope ====================

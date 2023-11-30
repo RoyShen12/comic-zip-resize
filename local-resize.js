@@ -1,4 +1,6 @@
 const { imgScaleWithRetry, imgReadWithRetry } = require('./util')
+const fsModule = require('fs')
+const fs = fsModule.promises
 
 /**
  * @param {string} sourcePath
@@ -10,6 +12,8 @@ module.exports = async function (sourcePath, destPath) {
   const jimpInst = await imgReadWithRetry(sourcePath)
 
   await imgScaleWithRetry(jimpInst, destPath)
+
+  await fs.rm(sourcePath)
 
   const cost = Number(process.hrtime.bigint() - s) / 1e9
   return cost
