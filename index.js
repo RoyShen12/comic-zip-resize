@@ -11,7 +11,7 @@ const yauzl = require('yauzl')
 const { v4: uuidV4 } = require('uuid')
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const { JPEG_MAX_MEM } = require('./config')
+const { JPEG_MAX_MEM, TMP_PATH } = require('./config')
 
 const JPEG = require('jpeg-js')
 const Jimp = require('jimp')
@@ -87,10 +87,7 @@ async function scanZipFile(filePath) {
       })
   ) {
     const id = uuidV4()
-    const tempPath = path.resolve(
-      '/share/ZFS18_DATA/homes/roy/bin/temp/image',
-      id
-    )
+    const tempPath = path.resolve(TMP_PATH, id)
     await fs.mkdir(tempPath, { recursive: true })
     console.log(
       `process file: ${chalk.cyanBright(filePath)} -> ${chalk.whiteBright(
@@ -292,10 +289,10 @@ scanDirectory(workingDir)
   .then(() => {
     localDynamicPool.destroy()
     remoteDynamicPools.forEach((p) => p.destroy())
-    return fs.readdir(tempPath)
+    return fs.readdir(TMP_PATH)
   })
   .then((fps) =>
     fps.map((fp) =>
-      fs.rm(path.resolve(tempPath, fp), { recursive: true, force: true })
+      fs.rm(path.resolve(TMP_PATH, fp), { recursive: true, force: true })
     )
   )
