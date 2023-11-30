@@ -12,8 +12,19 @@ const { v4: uuidV4 } = require('uuid')
 const { DynamicPool } = require('node-worker-threads-pool')
 
 const utils = require('./util')
+const { ResizeMachine } = utils
 
-const dynamicPool = new DynamicPool(os.cpus().length - 1)
+const localThreadsCount = os.cpus().length - 1
+const remoteThreadsCount = 11
+const remoteAddress = '192.168.50.59'
+const localDynamicPool = new DynamicPool(localThreadsCount)
+const remoteDynamicPool = new DynamicPool(remoteThreadsCount)
+const randomDispatcher = () => {
+  const r = Math.random()
+  if (r < localThreadsCount / (localThreadsCount + remoteThreadsCount))
+    return { pool: localDynamicPool, mark: ResizeMachine.Local }
+  else return { pool: remoteDynamicPool, mark: ResizeMachine.Remote }
+}
 
 const workingDir = process.argv[2]
 
@@ -120,39 +131,56 @@ async function scanZipFile(filePath) {
                   zipFile.readEntry()
 
                   // thread
-                  dynamicPool
+                  const getPool = randomDispatcher()
+                  const isLocal = getPool.mark === ResizeMachine.Local
+                  getPool.pool
                     .exec({
-                      task: async ({ sourcePath, destPath, ip }) => {
-                        // ==================== Thread Scope ====================
-                        // const cost = await require('./local-resize')(
-                        //   sourcePath,
-                        //   destPath
-                        // )
+                      task: isLocal
+                        ? async ({ sourcePath, destPath }) => {
+                            // ==================== Thread Scope ====================
+                            const cost = await require('./local-resize')(
+                              sourcePath,
+                              destPath
+                            )
 
-                        const cost = await require('./rpc-resize')(
-                          sourcePath,
-                          destPath,
-                          ip
-                        )
+                            const fsModule = require('fs')
+                            const fs = fsModule.promises
 
-                        const fsModule = require('fs')
-                        const fs = fsModule.promises
+                            await fs.rm(sourcePath)
 
-                        await fs.rm(sourcePath)
+                            return cost
+                            // ==================== End Thread Scope ====================
+                          }
+                        : async ({ sourcePath, destPath, ip }) => {
+                            // ==================== Thread Scope ====================
+                            const cost = await require('./rpc-resize')(
+                              sourcePath,
+                              destPath,
+                              ip
+                            )
 
-                        return cost
-                        // ==================== End Thread Scope ====================
-                      },
+                            const fsModule = require('fs')
+                            const fs = fsModule.promises
+
+                            await fs.rm(sourcePath)
+
+                            return cost
+                            // ==================== End Thread Scope ====================
+                          },
                       param: {
                         sourcePath: entryWritePath,
                         destPath: resizedPath,
-                        ip: '192.168.50.59',
+                        ip,
                       },
                     })
                     .then((cost) => {
                       processedEntry++
                       console.log(
-                        `${chalk.greenBright(
+                        `[${
+                          isLocal
+                            ? chalk.magentaBright('L')
+                            : chalk.cyanBright('R')
+                        }] ${chalk.greenBright(
                           'resizing file'
                         )} (${processedEntry}/${entryCount}) ${path.basename(
                           filePath
@@ -226,5 +254,5 @@ async function scanZipFile(filePath) {
 }
 
 scanDirectory(workingDir).then(() => {
-  dynamicPool.destroy()
+  localDynamicPool.destroy()
 })

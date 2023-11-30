@@ -9,9 +9,13 @@ const chalk = require('chalk')
 const server = new rpc.Server(rep)
 rep.bind(4000, '0.0.0.0')
 
+server.expose('threads', (fn) => {
+  fn(os.cpus().length - 1)
+})
+
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const dynamicPool = new DynamicPool(os.cpus().length - 1)
+const threadsPool = new DynamicPool(os.cpus().length - 1)
 
 let index = 0
 
@@ -19,7 +23,7 @@ server.expose('resize', async (imgBuffer, fn) => {
   try {
     index++
 
-    const transferredBuf = await dynamicPool.exec({
+    const transferredBuf = await threadsPool.exec({
       task: async ({ index, imgBuffer }) => {
         const chalk = require('chalk')
         const Jimp = require('jimp')

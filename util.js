@@ -5,4 +5,8 @@ module.exports = {
     console.log(chalk.redBright(msg))
     process.exit(code)
   },
+  ResizeMachine: {
+    Local: 1,
+    Remote: 2,
+  },
 }

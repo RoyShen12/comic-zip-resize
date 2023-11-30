@@ -15,12 +15,8 @@ module.exports = async function (sourcePath, destPath, ip) {
   req.connect(4000, ip)
 
   return await new Promise((res, rej) => {
-    const rpcStart = process.hrtime.bigint()
     client.call('resize', fs.readFileSync(sourcePath), (err, ret) => {
       if (err) rej(err)
-
-      const rpcCost = Number(process.hrtime.bigint() - rpcStart) / 1e9
-      console.log(`rpc cost ${rpcCost}s`)
 
       fs.writeFileSync(destPath, Buffer.from(ret.data))
 
