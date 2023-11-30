@@ -17,6 +17,7 @@ module.exports = async function (sourcePath, destPath) {
       if (err) rej(err)
 
       console.log('rpc.client.ret', ret)
+      console.log('arguments', ...arguments)
       fs.writeFileSync(destPath, ret.data)
       res(ret.cost)
     })
