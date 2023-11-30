@@ -7,14 +7,6 @@ const { imgScaleWithRetry, imgReadWithRetry } = require('./util')
 module.exports = async function (sourcePath, destPath) {
   const s = process.hrtime.bigint()
 
-  const Jimp = require('jimp')
-
-  const cachedJpegDecoder = Jimp.decoders['image/jpeg']
-  Jimp.decoders['image/jpeg'] = (data) => {
-    const userOpts = { maxMemoryUsageInMB: 1024 }
-    return cachedJpegDecoder(data, userOpts)
-  }
-
   const jimpInst = await imgReadWithRetry(sourcePath)
 
   await imgScaleWithRetry(jimpInst, destPath)

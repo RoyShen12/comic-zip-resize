@@ -26,15 +26,8 @@ server.expose('resize', async (imgBuffer, fn) => {
     const transferredBuf = await threadsPool.exec({
       task: async ({ index, imgBuffer }) => {
         const chalk = require('chalk')
-        const Jimp = require('jimp')
 
         const { imgScaleWithRetry, imgReadWithRetry } = require('./util')
-
-        const cachedJpegDecoder = Jimp.decoders['image/jpeg']
-        Jimp.decoders['image/jpeg'] = (data) => {
-          const userOpts = { maxMemoryUsageInMB: 1024 }
-          return cachedJpegDecoder(data, userOpts)
-        }
 
         const buffer = Buffer.from(imgBuffer.data)
 

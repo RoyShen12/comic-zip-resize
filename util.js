@@ -1,11 +1,8 @@
 const chalk = require('chalk')
 const Jimp = require('jimp')
-
-const cachedJpegDecoder = Jimp.decoders['image/jpeg']
-Jimp.decoders['image/jpeg'] = (data) => {
-  const userOpts = { maxMemoryUsageInMB: 1024 }
-  return cachedJpegDecoder(data, userOpts)
-}
+const JPEG = require('jpeg-js')
+Jimp.decoders['image/jpeg'] = (data) =>
+  JPEG.decode(data, { maxMemoryUsageInMB: 1024 })
 
 module.exports = {
   quit: function (msg = 'error & quit', code = 2) {
