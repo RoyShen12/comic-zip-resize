@@ -59,13 +59,13 @@ async function scanDirectory(pathParam) {
     const subStat = await fs.stat(subPath)
 
     if (subStat.isDirectory()) {
-      return await scanDirectory(subPath)
+      await scanDirectory(subPath)
     } else if (
       subStat.isFile() &&
       !subStat.isSymbolicLink() &&
       subFile.endsWith('.zip')
     ) {
-      return await scanZipFile(subPath)
+      await scanZipFile(subPath)
     }
   }
 
