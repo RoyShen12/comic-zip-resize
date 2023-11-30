@@ -207,7 +207,10 @@ async function scanZipFile(filePath) {
 
                     processedEntry++
                     console.log(
-                      `<${thisIndex}> [${
+                      `<${String(thisIndex).padStart(
+                        String(fileIndex).length,
+                        ' '
+                      )}> [${
                         isLocal
                           ? chalk.magentaBright('L ')
                           : chalk.cyanBright('R' + getPool.remoteIndex)
