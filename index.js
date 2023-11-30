@@ -169,9 +169,9 @@ async function scanZipFile(filePath) {
                       `<${String(thisIndex).padStart(
                         String(fileIndex).length,
                         ' '
-                      )}> ${path.basename(filePath)}/${
+                      )}> ${path.basename(filePath)}/${chalk.blueBright(
                         entry.fileName
-                      } dispatch to [${
+                      )} dispatch to [${
                         isLocal
                           ? chalk.magentaBright('L ')
                           : chalk.cyanBright('R' + getPool.remoteIndex)
@@ -220,9 +220,9 @@ async function scanZipFile(filePath) {
                       ).padStart(3, ' ')}/${String(entryCount).padStart(
                         3,
                         ' '
-                      )}) ${path.basename(filePath)}/${
+                      )}) ${path.basename(filePath)}/${chalk.blueBright(
                         entry.fileName
-                      } cost: ${chalk.yellowBright(
+                      )} cost: ${chalk.yellowBright(
                         cost.toFixed(3)
                       )} sec, speed: ${chalk.redBright(
                         processSpeed.toFixed(1)
