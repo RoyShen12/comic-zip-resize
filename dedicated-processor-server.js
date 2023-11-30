@@ -15,9 +15,8 @@ rep.bind(4000, '0.0.0.0')
 
 const SHARP_RATIO = 0.5
 
-server.expose('resize', async function (imgBuffer, fn) {
+server.expose('resize', async (imgBuffer, fn) => {
   try {
-    const s = process.hrtime.bigint()
     console.log('resize.buf', imgBuffer)
 
     const jimpInst = await Jimp.read(imgBuffer)
@@ -26,8 +25,7 @@ server.expose('resize', async function (imgBuffer, fn) {
       .quality(80)
       .getBufferAsync(Jimp.MIME_JPEG)
 
-    const cost = Number(process.hrtime.bigint() - s) / 1e9
-    fn(null, { data: resultBuffer, cost })
+    fn(null, resultBuffer)
   } catch (error) {
     fn(error)
   }
