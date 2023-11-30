@@ -15,10 +15,7 @@ const utils = require('./util')
 const { ResizeMachine } = utils
 
 const localThreadsCount = os.cpus().length - 1
-const remoteServer = [
-  { ip: '192.168.50.59', threads: 11 },
-  { ip: '192.168.50.136', threads: 15 },
-]
+const { remoteServer } = require('./config')
 const localDynamicPool = new DynamicPool(localThreadsCount)
 const remoteDynamicPools = remoteServer.map(
   (srv) => new DynamicPool(srv.threads)

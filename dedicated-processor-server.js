@@ -28,6 +28,8 @@ server.expose('resize', async (imgBuffer, fn) => {
         const chalk = require('chalk')
         const Jimp = require('jimp')
 
+        const { imgScaleWithRetry } = require('./util')
+
         const cachedJpegDecoder = Jimp.decoders['image/jpeg']
         Jimp.decoders['image/jpeg'] = (data) => {
           const userOpts = { maxMemoryUsageInMB: 1024 }
@@ -45,12 +47,7 @@ server.expose('resize', async (imgBuffer, fn) => {
 
         const jimpInst = await Jimp.read(buffer)
 
-        const SHARP_RATIO = 0.5
-
-        const resultBuffer = await jimpInst
-          .scale(SHARP_RATIO)
-          .quality(80)
-          .getBufferAsync(Jimp.MIME_JPEG)
+        const resultBuffer = await imgScaleWithRetry(jimpInst)
 
         const resultSize = resultBuffer.byteLength
         const ratio = ((resultSize / inputSize) * 100).toFixed(1) + '%'

@@ -1,3 +1,5 @@
+const { imgScaleWithRetry } = require('./util')
+
 /**
  * @param {string} sourcePath
  * @param {string} destPath
@@ -13,10 +15,9 @@ module.exports = async function (sourcePath, destPath) {
     return cachedJpegDecoder(data, userOpts)
   }
 
-  const SHARP_RATIO = 0.5
   const jimpInst = await Jimp.read(sourcePath)
 
-  await jimpInst.scale(SHARP_RATIO).quality(80).writeAsync(destPath)
+  await imgScaleWithRetry(jimpInst, destPath)
 
   const cost = Number(process.hrtime.bigint() - s) / 1e9
   return cost
