@@ -15,16 +15,28 @@ const utils = require('./util')
 const { ResizeMachine } = utils
 
 const localThreadsCount = os.cpus().length - 1
-const remoteThreadsCount = 11
-// const remoteAddress = '192.168.50.59'
-const remoteAddress = '192.168.50.136'
+const remoteServer = [
+  { ip: '192.168.50.59', threads: 11 },
+  { ip: '192.168.50.136', threads: 15 },
+]
 const localDynamicPool = new DynamicPool(localThreadsCount)
-const remoteDynamicPool = new DynamicPool(remoteThreadsCount)
+const remoteDynamicPools = remoteServer.map(
+  (srv) => new DynamicPool(srv.threads)
+)
+const totalThreads =
+  remoteServer.reduce((p, c) => p + c.threads, 0) + localThreadsCount
+const threadWeight = [localThreadsCount, ...remoteServer.map((s) => s.threads)]
+const Solution = require('./random-with-weight')
+const randomMachine = new Solution(threadWeight)
 const randomDispatcher = () => {
-  const r = Math.random()
-  if (r < localThreadsCount / (localThreadsCount + remoteThreadsCount))
-    return { pool: localDynamicPool, mark: ResizeMachine.Local }
-  else return { pool: remoteDynamicPool, mark: ResizeMachine.Remote }
+  const index = randomMachine.pickIndex()
+  if (index === 0) return { pool: localDynamicPool, mark: ResizeMachine.Local }
+  else
+    return {
+      pool: remoteDynamicPools[index - 1],
+      mark: ResizeMachine.Remote,
+      remoteIndex: index - 1,
+    }
 }
 
 const workingDir = process.argv[2]
@@ -179,8 +191,8 @@ async function scanZipFile(filePath) {
                       console.log(
                         `[${
                           isLocal
-                            ? chalk.magentaBright('L')
-                            : chalk.cyanBright('R')
+                            ? chalk.magentaBright('L ')
+                            : chalk.cyanBright('R' + getPool.remoteIndex)
                         }] ${chalk.greenBright(
                           'resizing file'
                         )} (${processedEntry}/${entryCount}) ${path.basename(
