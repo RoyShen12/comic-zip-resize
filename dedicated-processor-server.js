@@ -20,16 +20,25 @@ let index = 0
 server.expose('resize', async (imgBuffer, fn) => {
   index++
   try {
-    // console.log(`[${index}] resize.buf`, imgBuffer)
+    const buffer = Buffer.from(imgBuffer.data)
+    console.log(
+      `[${index}] received resize.buf ${(buffer.byteLength / 1e3).toFixed(
+        1
+      )} KB`
+    )
 
-    const jimpInst = await Jimp.read(Buffer.from(imgBuffer.data))
+    const jimpInst = await Jimp.read(buffer)
 
     const resultBuffer = await jimpInst
       .scale(SHARP_RATIO)
       .quality(80)
       .getBufferAsync(Jimp.MIME_JPEG)
 
-    console.log(`[${index}] resultBuffer resized finish`)
+    console.log(
+      `[${index}] resultBuffer resized finish ${(
+        resultBuffer.byteLength / 1e3
+      ).toFixed(1)} KB`
+    )
 
     fn(null, resultBuffer)
   } catch (error) {

@@ -22,6 +22,7 @@ module.exports = async function (sourcePath, destPath) {
 
       const cost = Number(process.hrtime.bigint() - s) / 1e9
 
+      req.close()
       res(cost)
     })
   })
