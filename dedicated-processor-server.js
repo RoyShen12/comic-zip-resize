@@ -28,7 +28,7 @@ server.expose('resize', async (imgBuffer, fn) => {
         const chalk = require('chalk')
         const Jimp = require('jimp')
 
-        const { imgScaleWithRetry } = require('./util')
+        const { imgScaleWithRetry, imgReadWithRetry } = require('./util')
 
         const cachedJpegDecoder = Jimp.decoders['image/jpeg']
         Jimp.decoders['image/jpeg'] = (data) => {
@@ -45,7 +45,7 @@ server.expose('resize', async (imgBuffer, fn) => {
           )
         )
 
-        const jimpInst = await Jimp.read(buffer)
+        const jimpInst = await imgReadWithRetry(buffer)
 
         const resultBuffer = await imgScaleWithRetry(jimpInst)
 

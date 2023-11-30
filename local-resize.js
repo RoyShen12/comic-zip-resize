@@ -1,4 +1,4 @@
-const { imgScaleWithRetry } = require('./util')
+const { imgScaleWithRetry, imgReadWithRetry } = require('./util')
 
 /**
  * @param {string} sourcePath
@@ -15,7 +15,7 @@ module.exports = async function (sourcePath, destPath) {
     return cachedJpegDecoder(data, userOpts)
   }
 
-  const jimpInst = await Jimp.read(sourcePath)
+  const jimpInst = await imgReadWithRetry(sourcePath)
 
   await imgScaleWithRetry(jimpInst, destPath)
 

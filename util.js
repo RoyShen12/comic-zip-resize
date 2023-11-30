@@ -10,6 +10,21 @@ module.exports = {
     Local: 1,
     Remote: 2,
   },
+  imgReadWithRetry(source, maxRetries = 5) {
+    let retries = 0
+
+    while (retries < maxRetries) {
+      try {
+        return Jimp.read(source)
+      } catch (error) {
+        console.error(error)
+        retries++
+        continue
+      }
+    }
+
+    throw new Error('jimp.read max retries')
+  },
   imgScaleWithRetry(jimpInst, writeDestPath, maxRetries = 5) {
     const SHARP_RATIO = 0.5
     let retries = 0
