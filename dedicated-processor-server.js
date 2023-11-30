@@ -4,6 +4,8 @@ const rpc = require('axon-rpc')
 const axon = require('axon')
 const rep = axon.socket('rep')
 
+const chalk = require('chalk')
+
 const server = new rpc.Server(rep)
 rep.bind(4000, '0.0.0.0')
 
@@ -11,17 +13,14 @@ const { DynamicPool } = require('node-worker-threads-pool')
 
 const dynamicPool = new DynamicPool(os.cpus().length - 1)
 
-const SHARP_RATIO = 0.5
-
 let index = 0
 
 server.expose('resize', async (imgBuffer, fn) => {
   try {
     index++
-    const buffer = Buffer.from(imgBuffer.data)
 
     const transferredBuf = await dynamicPool.exec({
-      task: async () => {
+      task: async ({ index, imgBuffer }) => {
         const chalk = require('chalk')
         const Jimp = require('jimp')
 
@@ -31,6 +30,8 @@ server.expose('resize', async (imgBuffer, fn) => {
           return cachedJpegDecoder(data, userOpts)
         }
 
+        const buffer = Buffer.from(imgBuffer.data)
+
         const inputSize = buffer.byteLength
         console.log(
           chalk.whiteBright(
@@ -39,6 +40,8 @@ server.expose('resize', async (imgBuffer, fn) => {
         )
 
         const jimpInst = await Jimp.read(buffer)
+
+        const SHARP_RATIO = 0.5
 
         const resultBuffer = await jimpInst
           .scale(SHARP_RATIO)
@@ -58,12 +61,16 @@ server.expose('resize', async (imgBuffer, fn) => {
 
         return resultBuffer
       },
-      param: {},
+      param: {
+        index,
+        imgBuffer,
+      },
     })
 
-    fn(null, transferredBuf)
+    fn(null, Buffer.from(transferredBuf))
   } catch (error) {
     console.log(chalk.redBright(`[${index}] throw error`))
+    console.error(error)
     fn(error)
   }
 })
