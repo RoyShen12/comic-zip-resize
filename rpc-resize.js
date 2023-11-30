@@ -19,6 +19,7 @@ const clients = new Map(
  * @param {string} destPath
  */
 module.exports = async function (sourcePath, destPath, ip) {
+  // TODO: timeout and retry
   const s = process.hrtime.bigint()
 
   return await new Promise((res, rej) => {

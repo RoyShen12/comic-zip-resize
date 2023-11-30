@@ -1,6 +1,5 @@
 const fsModule = require('fs')
 const path = require('path')
-const os = require('os')
 
 const { createWriteStream } = fsModule
 const fs = fsModule.promises
@@ -21,8 +20,7 @@ Jimp.decoders['image/jpeg'] = (data) =>
 const utils = require('./util')
 const { ResizeMachine } = utils
 
-const localThreadsCount = Math.max(1, os.cpus().length - 3)
-const { remoteServer } = require('./config')
+const { remoteServer, localThread: localThreadsCount } = require('./config')
 const localDynamicPool = new DynamicPool(localThreadsCount)
 const remoteDynamicPools = remoteServer.map(
   (srv) => new DynamicPool(srv.threads)
@@ -169,25 +167,21 @@ async function scanZipFile(filePath) {
 
                     const cost = await getPool.pool.exec({
                       task: isLocal
-                        ? async ({ sourcePath, destPath }) => {
+                        ? ({ sourcePath, destPath }) => {
                             // ==================== Thread Scope ====================
-                            const cost = await require('./local-resize')(
+                            return require('./local-resize')(
                               sourcePath,
                               destPath
                             )
-
-                            return cost
                             // ==================== End Thread Scope ====================
                           }
-                        : async ({ sourcePath, destPath, ip }) => {
+                        : ({ sourcePath, destPath, ip }) => {
                             // ==================== Thread Scope ====================
-                            const cost = await require('./rpc-resize')(
+                            return require('./rpc-resize')(
                               sourcePath,
                               destPath,
                               ip
                             )
-
-                            return cost
                             // ==================== End Thread Scope ====================
                           },
                       param: {
