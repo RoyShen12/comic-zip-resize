@@ -18,6 +18,7 @@ module.exports = async function (sourcePath, destPath, ip) {
     client.call('resize', fs.readFileSync(sourcePath), (err, ret) => {
       if (err || !ret) {
         rej(err)
+        console.log(sourcePath, err)
         return
       }
 
