@@ -165,6 +165,19 @@ async function scanZipFile(filePath) {
                     const getPool = randomDispatcher()
                     const isLocal = getPool.mark === ResizeMachine.Local
 
+                    console.log(
+                      `<${String(thisIndex).padStart(
+                        String(fileIndex).length,
+                        ' '
+                      )}> ${path.basename(filePath)}/${
+                        entry.fileName
+                      } dispatch to [${
+                        isLocal
+                          ? chalk.magentaBright('L ')
+                          : chalk.cyanBright('R' + getPool.remoteIndex)
+                      }]`
+                    )
+
                     const cost = await getPool.pool.exec({
                       task: isLocal
                         ? ({ sourcePath, destPath }) => {
