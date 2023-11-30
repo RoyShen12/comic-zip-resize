@@ -170,7 +170,7 @@ async function scanZipFile(filePath) {
                       param: {
                         sourcePath: entryWritePath,
                         destPath: resizedPath,
-                        ip,
+                        ip: remoteAddress,
                       },
                     })
                     .then((cost) => {
