@@ -16,6 +16,7 @@ module.exports = async function (sourcePath, destPath) {
     client.call('resize', fs.readFileSync(sourcePath), function (err, ret) {
       if (err) rej(err)
 
+      console.log('rpc.client.ret', ret)
       fs.writeFileSync(destPath, ret.data)
       res(ret.cost)
     })
