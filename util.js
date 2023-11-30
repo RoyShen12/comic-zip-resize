@@ -1,4 +1,5 @@
 const chalk = require('chalk')
+const Jimp = require('jimp')
 
 module.exports = {
   quit: function (msg = 'error & quit', code = 2) {
