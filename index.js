@@ -72,6 +72,8 @@ async function scanDirectory(pathParam) {
   )
 }
 
+let fileIndex = 0
+
 // make 0.5x zip with (LowQuality) file name
 async function scanZipFile(filePath) {
   const fileBaseName = path.basename(filePath)
@@ -86,6 +88,8 @@ async function scanZipFile(filePath) {
         return path.parse(fp).name !== path.parse(fileLowQualityPath).name
       })
   ) {
+    fileIndex++
+    const thisIndex = fileIndex
     const id = uuidV4()
     const tempPath = path.resolve(TMP_PATH, id)
     await fs.mkdir(tempPath, { recursive: true })
@@ -203,7 +207,7 @@ async function scanZipFile(filePath) {
 
                     processedEntry++
                     console.log(
-                      `[${
+                      `<${thisIndex}> [${
                         isLocal
                           ? chalk.magentaBright('L ')
                           : chalk.cyanBright('R' + getPool.remoteIndex)
