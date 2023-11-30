@@ -16,7 +16,8 @@ const { ResizeMachine } = utils
 
 const localThreadsCount = os.cpus().length - 1
 const remoteThreadsCount = 11
-const remoteAddress = '192.168.50.59'
+// const remoteAddress = '192.168.50.59'
+const remoteAddress = '192.168.50.136'
 const localDynamicPool = new DynamicPool(localThreadsCount)
 const remoteDynamicPool = new DynamicPool(remoteThreadsCount)
 const randomDispatcher = () => {
