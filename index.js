@@ -23,11 +23,11 @@ const localDynamicPool = new DynamicPool(localThreadsCount)
 const remoteDynamicPools = remoteServer.map(
   (srv) => new DynamicPool(srv.threads)
 )
-const totalThreads =
-  remoteServer.reduce((p, c) => p + c.threads, 0) + localThreadsCount
+
 const threadWeight = [localThreadsCount, ...remoteServer.map((s) => s.threads)]
 const Solution = require('./random-with-weight')
 const randomMachine = new Solution(threadWeight)
+
 const randomDispatcher = () => {
   const index = randomMachine.pickIndex()
   if (index === 0) return { pool: localDynamicPool, mark: ResizeMachine.Local }
@@ -36,6 +36,7 @@ const randomDispatcher = () => {
       pool: remoteDynamicPools[index - 1],
       mark: ResizeMachine.Remote,
       remoteIndex: index - 1,
+      ip: remoteServer[index - 1].ip,
     }
 }
 
@@ -183,7 +184,7 @@ async function scanZipFile(filePath) {
                       param: {
                         sourcePath: entryWritePath,
                         destPath: resizedPath,
-                        ip: remoteAddress,
+                        ip: getPool.ip,
                       },
                     })
                     .then((cost) => {
