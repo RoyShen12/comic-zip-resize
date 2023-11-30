@@ -15,7 +15,7 @@ server.expose('threads', (fn) => {
 
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const threadsPool = new DynamicPool(os.cpus().length - 1)
+const threadsPool = new DynamicPool(os.cpus().length)
 
 let index = 0
 
