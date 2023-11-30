@@ -288,7 +288,14 @@ async function scanZipFile(filePath) {
   }
 }
 
-scanDirectory(workingDir).then(() => {
-  localDynamicPool.destroy()
-  remoteDynamicPools.forEach((p) => p.destroy())
-})
+scanDirectory(workingDir)
+  .then(() => {
+    localDynamicPool.destroy()
+    remoteDynamicPools.forEach((p) => p.destroy())
+    return fs.readdir(tempPath)
+  })
+  .then((fps) =>
+    fps.map((fp) =>
+      fs.rm(path.resolve(tempPath, fp), { recursive: true, force: true })
+    )
+  )
