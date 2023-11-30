@@ -105,6 +105,7 @@ async function scanZipFile(filePath) {
         (err, zipFile) => {
           if (err) {
             rej(err)
+            return
           }
 
           const { entryCount } = zipFile
@@ -136,6 +137,7 @@ async function scanZipFile(filePath) {
               zipFile.openReadStream(entry, function (err, readStream) {
                 if (err) {
                   rej(err)
+                  return
                 }
 
                 readStream.on('end', function () {
