@@ -1,7 +1,8 @@
 const os = require('os')
+const path = require('path')
 
 module.exports = {
-  TMP_PATH: '/share/ZFS18_DATA/homes/roy/bin/temp/image',
+  TMP_PATH: path.resolve(os.homedir(), 'bin/temp/image'),
   SHARP_RATIO: 0.5,
   MAX_RETRY: 5,
   JPEG_MAX_MEM: 1536,

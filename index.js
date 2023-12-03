@@ -10,17 +10,29 @@ const yauzl = require('yauzl')
 const { v4: uuidV4 } = require('uuid')
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const { JPEG_MAX_MEM, TMP_PATH } = require('./config')
+const workingDir = process.argv[2]
+
+if (!workingDir) {
+  utils.quit('working dir is empty')
+}
+
+const {
+  JPEG_MAX_MEM,
+  TMP_PATH,
+  remoteServer,
+  localThread: localThreadsCount,
+} = require('./config')
 
 const JPEG = require('jpeg-js')
 const Jimp = require('jimp')
+
+// expand jpeg memory
 Jimp.decoders['image/jpeg'] = (data) =>
   JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
 
 const utils = require('./util')
 const { ResizeMachine } = utils
 
-const { remoteServer, localThread: localThreadsCount } = require('./config')
 const localDynamicPool = new DynamicPool(localThreadsCount)
 const remoteDynamicPools = remoteServer.map(
   (srv) => new DynamicPool(srv.threads)
@@ -40,12 +52,6 @@ const randomDispatcher = () => {
       remoteIndex: index - 1,
       ip: remoteServer[index - 1].ip,
     }
-}
-
-const workingDir = process.argv[2]
-
-if (!workingDir) {
-  utils.quit('working dir is empty')
 }
 
 async function scanDirectory(pathParam) {
@@ -251,6 +257,7 @@ async function scanZipFile(filePath) {
       chalk.greenBright(`${path.basename(filePath)} unzip and resize finished`)
     )
 
+    // promise of zip resized files
     await new Promise((res, rej) => {
       const output = createWriteStream(fileLowQualityPath)
       const archive = archiver('zip', {

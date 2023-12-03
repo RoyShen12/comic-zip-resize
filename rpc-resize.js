@@ -1,3 +1,5 @@
+// TODO: timeout and retry
+
 const fs = require('fs')
 
 const rpc = require('axon-rpc')
@@ -7,9 +9,9 @@ const { remoteServer } = require('./config')
 
 const clients = new Map(
   remoteServer.map((srv) => {
-    const req = axon.socket('req')
-    const client = new rpc.Client(req)
-    req.connect(4000, srv.ip)
+    const reqSocket = axon.socket('req')
+    const client = new rpc.Client(reqSocket)
+    reqSocket.connect(4000, srv.ip)
     return [srv.ip, client]
   })
 )
@@ -19,7 +21,6 @@ const clients = new Map(
  * @param {string} destPath
  */
 module.exports = async function (sourcePath, destPath, ip) {
-  // TODO: timeout and retry
   const s = process.hrtime.bigint()
 
   return await new Promise((res, rej) => {

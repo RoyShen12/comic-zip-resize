@@ -4,6 +4,7 @@ const JPEG = require('jpeg-js')
 
 const { SHARP_RATIO, MAX_RETRY, JPEG_MAX_MEM } = require('./config')
 
+// expand jpeg memory
 Jimp.decoders['image/jpeg'] = (data) =>
   JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
 

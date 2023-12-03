@@ -2,12 +2,12 @@ const os = require('os')
 
 const rpc = require('axon-rpc')
 const axon = require('axon')
-const rep = axon.socket('rep')
+const respSocket = axon.socket('rep')
 
 const chalk = require('chalk')
 
-const server = new rpc.Server(rep)
-rep.bind(4000, '0.0.0.0')
+const server = new rpc.Server(respSocket)
+respSocket.bind(4000, '0.0.0.0')
 
 server.expose('threads', (fn) => {
   fn(os.cpus().length - 1)
