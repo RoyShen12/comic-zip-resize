@@ -16,5 +16,5 @@ module.exports = {
     port: 4004,
   },
   // localThread: Math.max(1, os.cpus().length - 4),
-  localThread: 0,
+  localThread: 1,
 }

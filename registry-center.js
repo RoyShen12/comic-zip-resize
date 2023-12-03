@@ -72,7 +72,13 @@ server.expose(
             : methodMap.set(method.method, new Set([ipPort]))
         })
 
-        console.log(`server ${ip}:${defaultPort} registered`)
+        console.log(
+          `server ${ip}:${defaultPort} [${info.platform}] (CPU:${
+            info.cpuNum
+          }, freeMem:${(info.freeMem.value / 1024 / 1024 / 1024).toFixed(
+            1
+          )}GB) registered`
+        )
         statusMap.set(ip, true)
         fn(null, 'ok')
       },
@@ -91,7 +97,7 @@ server.expose(
    */
   (method, fn) => {
     const result = methodMap.get(method)
-    console.log('result', result, 'statusMap', statusMap)
+    // console.log('result', result, 'statusMap', statusMap)
     if (!result) {
       fn(new Error(`no such method`))
     } else {
@@ -113,9 +119,9 @@ server.expose(
                     (info.platform === 'darwin' ? 2 : 1)
                 ) - (info.platform === 'linux' ? 1 : 0)
               : 2
-            console.log(
-              `memCapacity=${memCapacity},cpuNum=${info?.cpuNum || 2}`
-            )
+            // console.log(
+            //   `memCapacity=${memCapacity},cpuNum=${info?.cpuNum || 2}`
+            // )
             return {
               ...server,
               threads: Math.min((info?.cpuNum || 2) - 1, memCapacity - 1),

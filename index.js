@@ -10,7 +10,13 @@ const yauzl = require('yauzl')
 const { v4: uuidV4 } = require('uuid')
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const { ResizeMachine, quit, callRpc } = require('./util')
+const {
+  ResizeMachine,
+  quit,
+  callRpc,
+  logBeforeResize,
+  logAfterResize,
+} = require('./util')
 
 const workingDir = process.argv[2]
 
@@ -200,80 +206,79 @@ callRpc(
 
                         const sourceSize = (await fs.stat(entryWritePath)).size
 
+                        let cost = undefined
                         // thread
-                        const selectedPool = randomDispatcher()
-                        const isLocal =
-                          selectedPool.mark === ResizeMachine.Local
-
-                        console.log(
-                          `<${String(thisIndex).padStart(
-                            String(fileIndex).length,
-                            ' '
-                          )}> ${path.basename(filePath)}/${chalk.blueBright(
-                            entry.fileName
-                          )} dispatch to [${
-                            isLocal
-                              ? chalk.magentaBright('L ')
-                              : chalk.cyanBright('R' + selectedPool.remoteIndex)
-                          }]`
-                        )
-
+                        let selectedPool = randomDispatcher()
                         if (!selectedPool.pool) {
                           console.log('getPool', selectedPool)
                           return quit('Empty getPool.pool')
                         }
+                        let isLocal = selectedPool.mark === ResizeMachine.Local
 
-                        const cost = await selectedPool.pool.exec({
-                          task: isLocal
-                            ? ({ sourcePath, destPath }) => {
-                                // ==================== Thread Scope ====================
-                                return require('./local-resize')(
-                                  sourcePath,
-                                  destPath
-                                )
-                                // ==================== End Thread Scope ====================
-                              }
-                            : ({ sourcePath, destPath, ip, port }) => {
-                                // ==================== Thread Scope ====================
-                                return require('./rpc-resize')(
-                                  sourcePath,
-                                  destPath,
-                                  ip,
-                                  port
-                                )
-                                // ==================== End Thread Scope ====================
+                        while (true) {
+                          logBeforeResize(
+                            thisIndex,
+                            fileIndex,
+                            filePath,
+                            entry,
+                            isLocal,
+                            selectedPool
+                          )
+
+                          try {
+                            cost = await selectedPool.pool.exec({
+                              task: isLocal
+                                ? ({ sourcePath, destPath }) => {
+                                    // ==================== Thread Scope ====================
+                                    return require('./local-resize')(
+                                      sourcePath,
+                                      destPath
+                                    )
+                                    // ==================== End Thread Scope ====================
+                                  }
+                                : ({ sourcePath, destPath, ip, port }) => {
+                                    // ==================== Thread Scope ====================
+                                    return require('./rpc-resize')(
+                                      sourcePath,
+                                      destPath,
+                                      ip,
+                                      port
+                                    )
+                                    // ==================== End Thread Scope ====================
+                                  },
+                              param: {
+                                sourcePath: entryWritePath,
+                                destPath: resizedPath,
+                                ip: selectedPool.ip,
+                                port: selectedPool.port,
                               },
-                          param: {
-                            sourcePath: entryWritePath,
-                            destPath: resizedPath,
-                            ip: selectedPool.ip,
-                            port: selectedPool.port,
-                          },
-                        })
+                            })
+                          } catch (error) {
+                            selectedPool = randomDispatcher()
+                            if (!selectedPool.pool) {
+                              console.log('getPool', selectedPool)
+                              return quit('Empty getPool.pool')
+                            }
+                            isLocal = selectedPool.mark === ResizeMachine.Local
+                          }
+                          break
+                        }
 
                         const processSpeed = sourceSize / cost / 1024
 
                         processedEntry++
-                        console.log(
-                          `<${String(thisIndex).padStart(
-                            String(fileIndex).length,
-                            ' '
-                          )}> [${
-                            isLocal
-                              ? chalk.magentaBright('L ')
-                              : chalk.cyanBright('R' + selectedPool.remoteIndex)
-                          }] ${chalk.greenBright('resizing file')} (${String(
-                            processedEntry
-                          ).padStart(3, ' ')}/${String(entryCount).padStart(
-                            3,
-                            ' '
-                          )}) ${path.basename(filePath)}/${chalk.blueBright(
-                            entry.fileName
-                          )} cost: ${chalk.yellowBright(
-                            cost.toFixed(3)
-                          )} sec, speed: ${chalk.redBright(
-                            processSpeed.toFixed(1)
-                          )} K/s`
+
+                        logAfterResize(
+                          thisIndex,
+                          fileIndex,
+                          isLocal,
+                          selectedPool,
+                          processedEntry,
+                          entryCount,
+                          filePath,
+                          entry,
+                          cost,
+                          processSpeed
                         )
 
                         if (processedEntry >= entryCount) {

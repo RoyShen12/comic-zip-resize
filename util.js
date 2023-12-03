@@ -1,3 +1,4 @@
+const path = require('path')
 const chalk = require('chalk')
 const Jimp = require('jimp')
 const JPEG = require('jpeg-js')
@@ -159,5 +160,55 @@ module.exports = {
     }
 
     throw new Error('jimpInst.scale max retries')
+  },
+  logBeforeResize(
+    thisIndex,
+    fileIndex,
+    filePath,
+    entry,
+    isLocal,
+    selectedPool
+  ) {
+    console.log(
+      `<${String(thisIndex).padStart(
+        String(fileIndex).length,
+        ' '
+      )}> ${path.basename(filePath)}/${chalk.blueBright(
+        entry.fileName
+      )} dispatch to [${
+        isLocal
+          ? chalk.magentaBright('L ')
+          : chalk.cyanBright('R' + selectedPool.remoteIndex)
+      }]`
+    )
+  },
+  logAfterResize(
+    thisIndex,
+    fileIndex,
+    isLocal,
+    selectedPool,
+    processedEntry,
+    entryCount,
+    filePath,
+    entry,
+    cost,
+    processSpeed
+  ) {
+    console.log(
+      `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> [${
+        isLocal
+          ? chalk.magentaBright('L ')
+          : chalk.cyanBright('R' + selectedPool.remoteIndex)
+      }] ${chalk.greenBright('resizing file')} (${String(
+        processedEntry
+      ).padStart(3, ' ')}/${String(entryCount).padStart(
+        3,
+        ' '
+      )}) ${path.basename(filePath)}/${chalk.blueBright(
+        entry.fileName
+      )} cost: ${chalk.yellowBright(
+        cost.toFixed(3)
+      )} sec, speed: ${chalk.redBright(processSpeed.toFixed(1))} K/s`
+    )
   },
 }
