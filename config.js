@@ -12,8 +12,8 @@ module.exports = {
   RPC_TIMEOUT: 15000,
   JPEG_MAX_MEM: 1536,
   registryServer: {
-    ip: '',
-    port: 4000,
+    ip: '192.168.50.59',
+    port: 4004,
   },
   remoteServer: [
     // { ip: '192.168.50.59', threads: 20 }, // mac

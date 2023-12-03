@@ -5,7 +5,7 @@ const axon = require('axon')
 const respSocket = axon.socket('rep')
 
 const server = new rpc.Server(respSocket)
-respSocket.bind(4000, '0.0.0.0')
+respSocket.bind(4004, '0.0.0.0')
 
 /**
  * <method, server info>
