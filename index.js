@@ -30,10 +30,10 @@ const Jimp = require('jimp')
 Jimp.decoders['image/jpeg'] = (data) =>
   JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
 
-const utils = require('./util')
-const { ResizeMachine } = utils
+const { ResizeMachine } = require('./util')
 
-const localDynamicPool = new DynamicPool(localThreadsCount)
+const localDynamicPool =
+  localThreadsCount > 0 ? new DynamicPool(localThreadsCount) : null
 const remoteDynamicPools = remoteServer.map(
   (srv) => new DynamicPool(srv.threads)
 )
@@ -246,9 +246,16 @@ async function scanZipFile(filePath) {
             }
           })
 
-          // zipFile.on('close', () => {
-          //   res()
-          // })
+          zipFile.on('close', () => {
+            console.log(
+              `<${String(thisIndex).padStart(
+                String(fileIndex).length,
+                ' '
+              )}> ${path.basename(filePath)} ${chalk.greenBright(
+                'read finish'
+              )}`
+            )
+          })
         }
       )
     })
@@ -307,7 +314,7 @@ async function scanZipFile(filePath) {
 
 scanDirectory(workingDir)
   .then(() => {
-    localDynamicPool.destroy()
+    localDynamicPool?.destroy()
     remoteDynamicPools.forEach((p) => p.destroy())
     return fs.readdir(TMP_PATH)
   })

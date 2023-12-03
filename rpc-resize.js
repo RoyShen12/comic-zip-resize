@@ -1,11 +1,11 @@
-// TODO: timeout and retry
-
-const fs = require('fs')
+const { promises: fs } = require('fs')
+const { threadId } = require('worker_threads')
 
 const rpc = require('axon-rpc')
 const axon = require('axon')
 
 const { remoteServer } = require('./config')
+const { callRpc } = require('./util')
 
 const clients = new Map(
   remoteServer.map((srv) => {
@@ -24,19 +24,32 @@ module.exports = async function (sourcePath, destPath, ip) {
   const s = process.hrtime.bigint()
 
   return await new Promise((res, rej) => {
-    clients.get(ip).call('resize', fs.readFileSync(sourcePath), (err, ret) => {
-      if (err || !ret) {
-        rej(err)
-        console.log(sourcePath, err)
-        return
-      }
+    fs.readFile(sourcePath)
+      .then((fContent) => {
+        // console.log(
+        //   `RpcClient [${String(threadId).padStart(2)}] try call ${ip}`
+        // )
 
-      fs.writeFileSync(destPath, Buffer.from(ret.data))
+        callRpc(clients.get(ip), 'resize', [fContent], (err, ret) => {
+          if (err || !ret) {
+            rej(err)
+            console.log(sourcePath, err)
+            return
+          }
 
-      const cost = Number(process.hrtime.bigint() - s) / 1e9
+          fs.writeFile(destPath, Buffer.from(ret.data))
+            .then(() => {
+              const cost = Number(process.hrtime.bigint() - s) / 1e9
 
-      fs.rmSync(sourcePath)
-      res(cost)
-    })
+              fs.rm(sourcePath)
+                .then(() => {
+                  res(cost)
+                })
+                .catch((err) => rej(err))
+            })
+            .catch((err) => rej(err))
+        })
+      })
+      .catch((err) => rej(err))
   })
 }
