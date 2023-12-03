@@ -12,26 +12,53 @@ const { registryServer } = require('./config')
 const registrySocket = axon.socket('req')
 const registryClient = new rpc.Client(registrySocket)
 registrySocket.connect(registryServer.port, registryServer.ip)
+
 const { callRpc, quit, ServerInfo } = require('./util')
-const thisServerInfo = new ServerInfo()
-callRpc(registryClient, 'registry', [thisServerInfo], (err, res) => {
-  if (err || !ret) {
-    console.log(err)
-    quit('registry failed!')
-  }
 
-  if (res !== 'ok') {
-    quit(`registry error, server response ${res}`)
-  }
+const mainPort = 4000
 
-  const server = new rpc.Server(respSocket)
-  respSocket.bind(4000, '0.0.0.0')
+const thisServerInfo = new ServerInfo(mainPort, [
+  {
+    method: 'resize',
+    port: mainPort,
+  },
+])
 
-  const threadsPool = new DynamicPool(os.cpus().length)
+callRpc(
+  registryClient,
+  'registry',
+  [thisServerInfo],
+  (err, res) => {
+    if (err || !res) {
+      console.log(err)
+      quit('registry failed!')
+    }
 
-  let index = 0
+    if (res !== 'ok') {
+      quit(`registry error, server response ${res}`)
+    }
 
-  server.expose('resize', async (imgBuffer, fn) => {
+    console.log('server online')
+  },
+  500
+)
+
+const server = new rpc.Server(respSocket)
+respSocket.bind(mainPort, '0.0.0.0')
+
+server.expose('alive', (fn) => fn(null, 'still'))
+
+const threadsPool = new DynamicPool(os.cpus().length * 2)
+
+let index = 0
+
+server.expose(
+  'resize',
+  /**
+   * @param {{data: Uint8Array}} imgBuffer
+   * @param {(err?: Error | null, buffer?: Buffer) => void} fn
+   */
+  async (imgBuffer, fn) => {
     try {
       index++
 
@@ -81,7 +108,5 @@ callRpc(registryClient, 'registry', [thisServerInfo], (err, res) => {
       console.error(error)
       fn(error)
     }
-  })
-
-  console.log('server online')
-})
+  }
+)
