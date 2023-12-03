@@ -116,7 +116,7 @@ server.expose(
             const memCapacity = info
               ? Math.floor(
                   (info.freeMem.value / (1536 * 1024 * 1024)) *
-                    (info.platform === 'darwin' ? 2 : 1)
+                    (info.platform === 'darwin' ? 1.5 : 1)
                 ) - (info.platform === 'linux' ? 1 : 0)
               : 2
             // console.log(
@@ -150,7 +150,7 @@ setInterval(() => {
       }
     )
   }
-  if (allOk) console.log(`routine check all ok`)
+  // if (allOk) console.log(`routine check all ok`)
 }, 5000)
 
 console.log('registry center online')

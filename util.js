@@ -182,6 +182,36 @@ module.exports = {
       }]`
     )
   },
+  logWhileChangeServer(
+    thisIndex,
+    fileIndex,
+    filePath,
+    entry,
+    isLocal,
+    selectedPool,
+    oldIsLocal,
+    oldSelectedPool,
+    retried,
+    error
+  ) {
+    console.error(error.message)
+    console.log(
+      `<${String(thisIndex).padStart(
+        String(fileIndex).length,
+        ' '
+      )}> ${path.basename(filePath)}/${chalk.blueBright(
+        entry.fileName
+      )} ${chalk.redBright('Re')}dispatch from [${
+        oldIsLocal
+          ? chalk.magentaBright('L ')
+          : chalk.cyanBright('R' + oldSelectedPool.remoteIndex)
+      }] to [${
+        isLocal
+          ? chalk.magentaBright('L ')
+          : chalk.cyanBright('R' + selectedPool.remoteIndex)
+      }] (retried ${chalk.redBright(retried)})`
+    )
+  },
   logAfterResize(
     thisIndex,
     fileIndex,

@@ -64,6 +64,7 @@ server.expose(
 
       const transferredBuf = await threadsPool.exec({
         task: async ({ index, imgBuffer }) => {
+          const { threadId } = require('worker_threads')
           const chalk = require('chalk')
 
           const { imgScaleWithRetry, imgReadWithRetry } = require('./util')
@@ -73,7 +74,10 @@ server.expose(
           const inputSize = buffer.byteLength
           console.log(
             chalk.whiteBright(
-              `[${index}] received resize.buf ${(inputSize / 1e3).toFixed(
+              `[T${String(threadId).padStart(
+                2,
+                ' '
+              )}][${index}] received resize.buf ${(inputSize / 1e3).toFixed(
                 1
               )} KB`
             )
@@ -88,7 +92,10 @@ server.expose(
 
           console.log(
             chalk.greenBright(
-              `[${index}] resized finish ${(resultSize / 1e3).toFixed(
+              `[T${String(threadId).padStart(
+                2,
+                ' '
+              )}][${index}] resized finish ${(resultSize / 1e3).toFixed(
                 1
               )} KB (${ratio})`
             )

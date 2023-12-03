@@ -16,6 +16,7 @@ const {
   callRpc,
   logBeforeResize,
   logAfterResize,
+  logWhileChangeServer,
 } = require('./util')
 
 const workingDir = process.argv[2]
@@ -45,6 +46,79 @@ const {
 
 const localDynamicPool =
   localThreadsCount > 0 ? new DynamicPool(localThreadsCount) : null
+/**
+ * @type {Map<string, DynamicPool>}
+ */
+const activeRemoteDynamicPools = new Map()
+/**
+ * @type {Map<string, DynamicPool>}
+ */
+const inactiveRemoteDynamicPools = new Map()
+
+/**
+ * @param {{ip: string; port: number; threads: number}[]} remoteServer
+ */
+const createRandomPicker = (remoteServer) => {
+  remoteServer.forEach((srv) => {
+    const ipPort = `${srv.ip}:${srv.port}`
+    if (!activeRemoteDynamicPools.has(ipPort)) {
+      /**
+       * @type {DynamicPool}
+       */
+      // @ts-ignore
+      const pool = inactiveRemoteDynamicPools.has(ipPort)
+        ? inactiveRemoteDynamicPools.get(ipPort)
+        : new DynamicPool(srv.threads)
+      inactiveRemoteDynamicPools.delete(ipPort)
+      activeRemoteDynamicPools.set(ipPort, pool)
+    }
+  })
+
+  activeRemoteDynamicPools.forEach((pool, ipPort) => {
+    if (
+      remoteServer.findIndex((srv) => {
+        const remoteIpPort = `${srv.ip}:${srv.port}`
+        return remoteIpPort === ipPort
+      }) === -1
+    ) {
+      inactiveRemoteDynamicPools.set(ipPort, pool)
+      activeRemoteDynamicPools.delete(ipPort)
+    }
+  })
+
+  const threadWeight = [
+    localThreadsCount,
+    ...Array.from(activeRemoteDynamicPools.keys()).map((ipPort) => {
+      const ip = ipPort.split(':')[0]
+      return remoteServer.find((srv) => srv.ip === ip)?.threads
+    }),
+  ]
+  const randomMachine = new Solution(threadWeight)
+
+  /**
+   * @param {DynamicPool | undefined} ignore
+   * @returns {{pool: DynamicPool | null; mark: number; remoteIndex?: number; ip?: string; port?: number}}
+   */
+  return (ignore) => {
+    let ans
+    while (ans === undefined || ans.pool === ignore) {
+      const index = randomMachine.pickIndex()
+      if (index === 0) {
+        ans = { pool: localDynamicPool, mark: ResizeMachine.Local }
+      } else {
+        const remoteIndex = index - 1
+        ans = {
+          pool: Array.from(activeRemoteDynamicPools.values())[remoteIndex],
+          mark: ResizeMachine.Remote,
+          remoteIndex,
+          ip: remoteServer[remoteIndex].ip,
+          port: remoteServer[remoteIndex].port,
+        }
+      }
+    }
+    return ans
+  }
+}
 
 // request registry server for remote server information
 const configServerSocket = axon.socket('req')
@@ -67,31 +141,21 @@ callRpc(
 
     console.log('fetch remoteServer', remoteServer)
 
-    const remoteDynamicPools = remoteServer.map(
-      (srv) => new DynamicPool(srv.threads)
-    )
+    let randomDispatcher = createRandomPicker(remoteServer)
 
-    const threadWeight = [
-      localThreadsCount,
-      ...remoteServer.map((s) => s.threads),
-    ]
-    const randomMachine = new Solution(threadWeight)
-
-    const randomDispatcher = () => {
-      const index = randomMachine.pickIndex()
-      if (index === 0) {
-        return { pool: localDynamicPool, mark: ResizeMachine.Local }
-      } else {
-        const remoteIndex = index - 1
-        return {
-          pool: remoteDynamicPools[remoteIndex],
-          mark: ResizeMachine.Remote,
-          remoteIndex,
-          ip: remoteServer[remoteIndex].ip,
-          port: remoteServer[remoteIndex].port,
+    setInterval(() => {
+      callRpc(
+        configServerClient,
+        'getMethodConfig',
+        ['resize'],
+        (err, remoteServer) => {
+          if (!err && remoteServer) {
+            console.log('refresh remote server list', remoteServer)
+            randomDispatcher = createRandomPicker(remoteServer)
+          }
         }
-      }
-    }
+      )
+    }, 5000)
 
     async function scanDirectory(pathParam) {
       console.log(`scan dir: ${chalk.blueBright(pathParam)}`)
@@ -209,13 +273,14 @@ callRpc(
                         let cost = undefined
                         // thread
                         let selectedPool = randomDispatcher()
-                        if (!selectedPool.pool) {
+                        if (!selectedPool || !selectedPool.pool) {
                           console.log('getPool', selectedPool)
                           return quit('Empty getPool.pool')
                         }
                         let isLocal = selectedPool.mark === ResizeMachine.Local
 
-                        while (true) {
+                        let retried = 0
+                        while (cost === undefined) {
                           logBeforeResize(
                             thisIndex,
                             fileIndex,
@@ -254,14 +319,28 @@ callRpc(
                               },
                             })
                           } catch (error) {
-                            selectedPool = randomDispatcher()
-                            if (!selectedPool.pool) {
+                            const oldSelectedPool = { ...selectedPool }
+                            const oldIsLocal = isLocal
+                            selectedPool = randomDispatcher(selectedPool.pool)
+                            if (!selectedPool || !selectedPool.pool) {
                               console.log('getPool', selectedPool)
                               return quit('Empty getPool.pool')
                             }
                             isLocal = selectedPool.mark === ResizeMachine.Local
+                            retried++
+                            logWhileChangeServer(
+                              thisIndex,
+                              fileIndex,
+                              filePath,
+                              entry,
+                              isLocal,
+                              selectedPool,
+                              oldIsLocal,
+                              oldSelectedPool,
+                              retried,
+                              error
+                            )
                           }
-                          break
                         }
 
                         const processSpeed = sourceSize / cost / 1024
@@ -363,7 +442,8 @@ callRpc(
     scanDirectory(workingDir)
       .then(() => {
         localDynamicPool?.destroy()
-        remoteDynamicPools.forEach((p) => p.destroy())
+        activeRemoteDynamicPools.forEach((p) => p.destroy())
+        inactiveRemoteDynamicPools.forEach((p) => p.destroy())
         return fs.readdir(TMP_PATH)
       })
       .then((fileNodes) =>
