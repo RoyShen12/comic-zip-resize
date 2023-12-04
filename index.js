@@ -220,7 +220,7 @@ callRpc(
         )
 
         // promise of unzip and write files and resize files
-        await new Promise((res, rej) => {
+        const hasNoChange = await new Promise((res, rej) => {
           yauzl.open(
             filePath,
             {
@@ -237,17 +237,20 @@ callRpc(
               }
 
               const { entryCount } = zipFile
-              let processedEntry = 0
+              let processedEntries = 0
+              let skippedEntries = 0
 
               zipFile.readEntry()
 
               zipFile.on('entry', function (entry) {
+                let zipDirCount = 0
                 if (/\/$/.test(entry.fileName)) {
                   console.log(
                     `${chalk.yellowBright('entry(dir)')}: ${chalk.gray(
                       entry.fileName
                     )}`
                   )
+                  zipDirCount++
                   // Directory file names end with '/'.
                   // Note that entires for directories themselves are optional.
                   // An entry's fileName implicitly requires its parent directories to exist.
@@ -255,10 +258,12 @@ callRpc(
                 } else {
                   // file entry
                   // console.log(`entry: ${chalk.gray(entry.fileName)}`)
-                  const entryWritePath = path.resolve(tempPath, entry.fileName)
-                  const { name: entryBaseName, ext: entryExtName } = path.parse(
-                    entry.fileName
-                  )
+                  const {
+                    name: entryBaseName,
+                    ext: entryExtName,
+                    base: entryName,
+                  } = path.parse(entry.fileName)
+                  const entryWritePath = path.resolve(tempPath, entryName)
                   const resizedName = `${entryBaseName}-lowQ${entryExtName}`
                   const resizedPath = path.resolve(tempPath, resizedName)
 
@@ -384,15 +389,15 @@ callRpc(
 
                           const processSpeed = sourceSize / cost / 1024
 
-                          processedEntry++
+                          processedEntries++
 
                           logAfterResize(
                             thisIndex,
                             fileIndex,
                             isLocal,
                             selectedPool,
-                            processedEntry,
-                            entryCount,
+                            processedEntries,
+                            entryCount - zipDirCount,
                             filePath,
                             entry,
                             cost,
@@ -400,19 +405,20 @@ callRpc(
                           )
                         } else {
                           // skip resize
-                          processedEntry++
+                          processedEntries++
+                          skippedEntries++
                           logAfterSkipped(
                             thisIndex,
                             fileIndex,
-                            processedEntry,
-                            entryCount,
+                            processedEntries,
+                            entryCount - zipDirCount,
                             filePath,
                             entry
                           )
                         }
 
-                        if (processedEntry >= entryCount) {
-                          res(undefined)
+                        if (processedEntries >= entryCount - zipDirCount) {
+                          res(skippedEntries === entryCount - zipDirCount)
                         }
                       })
                     })
@@ -442,51 +448,59 @@ callRpc(
           )
         )
 
-        // promise of zip resized files
-        await new Promise((res, rej) => {
-          const output = createWriteStream(fileLowQualityPath)
-          const archive = archiver('zip', {
-            zlib: {
-              level: 0,
-            },
-          })
+        if (hasNoChange) {
+          console.log(
+            chalk.yellowBright(
+              `${path.basename(filePath)} no change and skip zipping`
+            )
+          )
+        } else {
+          // promise of zip resized files
+          await new Promise((res, rej) => {
+            const output = createWriteStream(fileLowQualityPath)
+            const archive = archiver('zip', {
+              zlib: {
+                level: 0,
+              },
+            })
 
-          output.on('close', function () {
+            output.on('close', function () {
+              console.log(
+                `${chalk.greenBright(
+                  path.basename(filePath)
+                )} zip size: ${chalk.blueBright(
+                  `${(archive.pointer() / 1e6).toFixed(1)} MB`
+                )}`
+              )
+              res(undefined)
+            })
+
+            archive.on('warning', function (err) {
+              if (err.code === 'ENOENT') {
+                console.log(chalk.redBright('archive on warning: ENOENT'))
+                console.error(err)
+              } else {
+                rej(err)
+              }
+            })
+
+            archive.on('error', function (err) {
+              rej(err)
+            })
+
+            archive.pipe(output)
+
             console.log(
-              `${chalk.greenBright(
-                path.basename(filePath)
-              )} zip size: ${chalk.blueBright(
-                `${(archive.pointer() / 1e6).toFixed(1)} MB`
+              `${chalk.cyanBright(path.basename(filePath))} ${chalk.greenBright(
+                'start zipping'
               )}`
             )
-            res(undefined)
+
+            archive.directory(tempPath, false)
+
+            archive.finalize()
           })
-
-          archive.on('warning', function (err) {
-            if (err.code === 'ENOENT') {
-              console.log(chalk.redBright('archive on warning: ENOENT'))
-              console.error(err)
-            } else {
-              rej(err)
-            }
-          })
-
-          archive.on('error', function (err) {
-            rej(err)
-          })
-
-          archive.pipe(output)
-
-          console.log(
-            `${chalk.cyanBright(path.basename(filePath))} ${chalk.greenBright(
-              'start zipping'
-            )}`
-          )
-
-          archive.directory(tempPath, false)
-
-          archive.finalize()
-        })
+        }
       }
     }
 
