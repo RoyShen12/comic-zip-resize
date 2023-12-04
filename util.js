@@ -143,7 +143,7 @@ module.exports = {
 
     while (retries < maxRetries) {
       try {
-        return Boolean(writeDestPath)
+        return writeDestPath
           ? await jimpInst
               .scale(SHARP_RATIO)
               .quality(80)
@@ -205,7 +205,7 @@ module.exports = {
         oldIsLocal
           ? chalk.magentaBright('L ')
           : chalk.cyanBright('R' + oldSelectedPool.remoteIndex)
-      }] to [${
+      }] --> [${
         isLocal
           ? chalk.magentaBright('L ')
           : chalk.cyanBright('R' + selectedPool.remoteIndex)
@@ -250,7 +250,7 @@ module.exports = {
     )
   },
   poolIsIdle(pool) {
-    return pool.workers.some((w) => w.ready)
+    return pool && pool.workers && pool.workers.some((w) => w.ready)
   },
   async waitForPoolIdle(pool) {
     const waitStart = process.hrtime.bigint()

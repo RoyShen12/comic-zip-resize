@@ -45,6 +45,8 @@ const {
   TMP_PATH,
   localThread: localThreadsCount,
   registryServer,
+  REMOTE_CONFIG_REFRESH,
+  REMOTE_CONFIG_TIMEOUT,
 } = require('./config')
 
 const localDynamicPool =
@@ -154,12 +156,25 @@ callRpc(
         ['resize'],
         (err, remoteServer) => {
           if (!err && remoteServer) {
-            console.log('refresh remote server list', remoteServer)
+            console.log(
+              'refresh remote server list',
+              remoteServer
+                .map(
+                  (s) =>
+                    `${chalk.greenBright(
+                      `${s.ip}:${s.port}`
+                    )}@${chalk.yellowBright(`${s.threads}C`)}`
+                )
+                .join(','),
+              'all pools',
+              getAllUsablePools().length
+            )
             randomDispatcher = createRandomPicker(remoteServer)
           }
-        }
+        },
+        REMOTE_CONFIG_TIMEOUT
       )
-    }, 5000)
+    }, REMOTE_CONFIG_REFRESH)
 
     async function scanDirectory(pathParam) {
       console.log(`scan dir: ${chalk.blueBright(pathParam)}`)
@@ -282,6 +297,7 @@ callRpc(
                           if (!poolIsIdle(selectedPool.pool)) {
                             selectedPool = undefined
                             if (
+                              getAllUsablePools().length === 0 ||
                               getAllUsablePools().every(
                                 (pool) => !poolIsIdle(pool)
                               )
@@ -294,32 +310,16 @@ callRpc(
 
                         let retried = 0
                         while (cost === undefined) {
-                          logBeforeResize(
-                            thisIndex,
-                            fileIndex,
-                            filePath,
-                            entry,
-                            isLocal,
-                            selectedPool
-                          )
+                          // logBeforeResize(
+                          //   thisIndex,
+                          //   fileIndex,
+                          //   filePath,
+                          //   entry,
+                          //   isLocal,
+                          //   selectedPool
+                          // )
 
                           try {
-                            // console.log('localDynamicPool', localDynamicPool)
-                            // console.log(
-                            //   'activeRemoteDynamicPools',
-                            //   activeRemoteDynamicPools
-                            // )
-                            // console.log(
-                            //   'inactiveRemoteDynamicPools',
-                            //   inactiveRemoteDynamicPools
-                            // )
-                            // if (!poolIsIdle(selectedPool.pool)) {
-                            //   console.log(
-                            //     `wait for pool idle cost ${(
-                            //       await waitForPoolIdle(selectedPool.pool)
-                            //     ).toFixed(3)}sec`
-                            //   )
-                            // }
                             cost = await selectedPool.pool.exec({
                               task: isLocal
                                 ? ({ sourcePath, destPath }) => {
@@ -359,6 +359,7 @@ callRpc(
                               ) {
                                 selectedPool = undefined
                                 if (
+                                  getAllUsablePools().length === 0 ||
                                   getAllUsablePools().every(
                                     (pool) => !poolIsIdle(pool)
                                   )
@@ -495,5 +496,6 @@ callRpc(
       .then(() => {
         configServerSocket.close()
       })
-  }
+  },
+  REMOTE_CONFIG_TIMEOUT
 )

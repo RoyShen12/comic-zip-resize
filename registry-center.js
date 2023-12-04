@@ -1,4 +1,4 @@
-const os = require('os')
+const chalk = require('chalk')
 
 const rpc = require('axon-rpc')
 const axon = require('axon')
@@ -8,6 +8,7 @@ const server = new rpc.Server(respSocket)
 respSocket.bind(4004, '0.0.0.0')
 
 const { callRpc } = require('./util')
+const { ALIVE_TIMEOUT, ALIVE_INTERVAL, JPEG_MAX_MEM } = require('./config')
 
 /**
  * @type {Map<string, Set<string>>}
@@ -39,7 +40,7 @@ const checkServerAlive = (ip, port, onOK, onDie) => {
       }
       reqSocket.close()
     },
-    300
+    ALIVE_TIMEOUT
   )
 }
 
@@ -115,7 +116,7 @@ server.expose(
             const info = serverMap.get(server.ip)
             const memCapacity = info
               ? Math.floor(
-                  (info.freeMem.value / (1536 * 1024 * 1024)) *
+                  (info.freeMem.value / (JPEG_MAX_MEM * 1024 * 1024)) *
                     (info.platform === 'darwin' ? 1.5 : 1)
                 ) - (info.platform === 'linux' ? 1 : 0)
               : 2
@@ -146,11 +147,21 @@ setInterval(() => {
       () => {
         allOk = false
         statusMap.set(ip, false)
-        console.log(`server ${ip}:${port} down!`)
+        // console.log(`server ${ip}:${port} down!`)
       }
     )
   }
-  // if (allOk) console.log(`routine check all ok`)
-}, 5000)
+
+  console.log(
+    [...statusMap]
+      .map(
+        (status) =>
+          `${status[0]} (${
+            status[1] ? chalk.greenBright('online') : chalk.redBright('  down')
+          })`
+      )
+      .join(' | ')
+  )
+}, ALIVE_INTERVAL)
 
 console.log('registry center online')

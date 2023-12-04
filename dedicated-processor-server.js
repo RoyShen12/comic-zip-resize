@@ -8,7 +8,7 @@ const chalk = require('chalk')
 
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const { registryServer } = require('./config')
+const { registryServer, REGISTRY_TIMEOUT } = require('./config')
 const registrySocket = axon.socket('req')
 const registryClient = new rpc.Client(registrySocket)
 registrySocket.connect(registryServer.port, registryServer.ip)
@@ -40,7 +40,7 @@ callRpc(
 
     console.log('server online')
   },
-  500
+  REGISTRY_TIMEOUT
 )
 
 const server = new rpc.Server(respSocket)
