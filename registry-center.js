@@ -152,11 +152,12 @@ setInterval(() => {
     )
   }
 
+  const now = new Date()
   console.log(
     [...statusMap]
       .map(
         (status) =>
-          `${status[0]} (${
+          `${now.toLocaleString()}.${now.getMilliseconds()} ${status[0]} (${
             status[1] ? chalk.greenBright('online') : chalk.redBright('  down')
           })`
       )
