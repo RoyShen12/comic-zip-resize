@@ -34,6 +34,10 @@ async function jimpReadImage(source, maxRetries = MAX_RETRY) {
   throw new Error('jimp.read max retries')
 }
 
+function isNodeLargerThan16() {
+  return Number(process.versions.node.split('.')[0]) > 16
+}
+
 module.exports = {
   ServerInfo,
   quit: function (msg = 'error & quit', code = 2) {
@@ -55,48 +59,50 @@ module.exports = {
    * @returns {Promise<Buffer>}
    */
   async imgScaleWithRetry(source, writeDestPath, maxRetries = MAX_RETRY) {
-    const sharpInst = sharp(source)
-    const meta = await sharpInst.metadata()
-    if (!meta.width) {
-      throw new Error('sharpInst.metadata.width not found')
+    if (isNodeLargerThan16()) {
+      const sharpInst = sharp(source)
+      const meta = await sharpInst.metadata()
+      if (!meta.width) {
+        throw new Error('sharpInst.metadata.width not found')
+      }
+      const targetWidth = Math.round(meta.width * SHARP_RATIO)
+      const resizedSharpInst = sharpInst
+        .resize(targetWidth, null, {
+          kernel: 'lanczos3',
+        })
+        .jpeg({
+          quality: 80,
+        })
+      // @ts-ignore
+      return writeDestPath
+        ? await resizedSharpInst.toFile(writeDestPath)
+        : await resizedSharpInst.toBuffer()
+    } else {
+      const jimpInst = await jimpReadImage(source)
+
+      let retries = 0
+
+      while (retries < maxRetries) {
+        try {
+          // @ts-ignore
+          return writeDestPath
+            ? await jimpInst
+                .scale(SHARP_RATIO)
+                .quality(80)
+                .writeAsync(writeDestPath)
+            : await jimpInst
+                .scale(SHARP_RATIO)
+                .quality(80)
+                .getBufferAsync(Jimp.MIME_JPEG)
+        } catch (error) {
+          console.error(error)
+          retries++
+          continue
+        }
+      }
+
+      throw new Error('jimpInst.scale max retries')
     }
-    const targetWidth = Math.round(meta.width * SHARP_RATIO)
-    const resizedSharpInst = sharpInst
-      .resize(targetWidth, null, {
-        kernel: 'lanczos3',
-      })
-      .jpeg({
-        quality: 80,
-      })
-    // @ts-ignore
-    return writeDestPath
-      ? await resizedSharpInst.toFile(writeDestPath)
-      : await resizedSharpInst.toBuffer()
-
-    // const jimpInst = await jimpReadImage(source)
-
-    // let retries = 0
-
-    // while (retries < maxRetries) {
-    //   try {
-    //     // @ts-ignore
-    //     return writeDestPath
-    //       ? await jimpInst
-    //           .scale(SHARP_RATIO)
-    //           .quality(80)
-    //           .writeAsync(writeDestPath)
-    //       : await jimpInst
-    //           .scale(SHARP_RATIO)
-    //           .quality(80)
-    //           .getBufferAsync(Jimp.MIME_JPEG)
-    //   } catch (error) {
-    //     console.error(error)
-    //     retries++
-    //     continue
-    //   }
-    // }
-
-    // throw new Error('jimpInst.scale max retries')
   },
   logBeforeResize(
     thisIndex,
