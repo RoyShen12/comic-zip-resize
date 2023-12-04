@@ -13,10 +13,13 @@ const { DynamicPool } = require('node-worker-threads-pool')
 const {
   ResizeMachine,
   quit,
+  sleep,
   callRpc,
   logBeforeResize,
   logAfterResize,
   logWhileChangeServer,
+  poolIsIdle,
+  waitForPoolIdle,
 } = require('./util')
 
 const workingDir = process.argv[2]
@@ -54,6 +57,11 @@ const activeRemoteDynamicPools = new Map()
  * @type {Map<string, DynamicPool>}
  */
 const inactiveRemoteDynamicPools = new Map()
+
+const getAllUsablePools = () =>
+  localDynamicPool
+    ? [localDynamicPool, ...activeRemoteDynamicPools.values()]
+    : [...activeRemoteDynamicPools.values()]
 
 /**
  * @param {{ip: string; port: number; threads: number}[]} remoteServer
@@ -96,27 +104,23 @@ const createRandomPicker = (remoteServer) => {
   const randomMachine = new Solution(threadWeight)
 
   /**
-   * @param {DynamicPool | undefined} ignore
    * @returns {{pool: DynamicPool | null; mark: number; remoteIndex?: number; ip?: string; port?: number}}
    */
-  return (ignore) => {
-    let ans
-    while (ans === undefined || ans.pool === ignore) {
-      const index = randomMachine.pickIndex()
-      if (index === 0) {
-        ans = { pool: localDynamicPool, mark: ResizeMachine.Local }
-      } else {
-        const remoteIndex = index - 1
-        ans = {
-          pool: Array.from(activeRemoteDynamicPools.values())[remoteIndex],
-          mark: ResizeMachine.Remote,
-          remoteIndex,
-          ip: remoteServer[remoteIndex].ip,
-          port: remoteServer[remoteIndex].port,
-        }
+  return () => {
+    const index = randomMachine.pickIndex()
+
+    if (index === 0) {
+      return { pool: localDynamicPool, mark: ResizeMachine.Local }
+    } else {
+      const remoteIndex = index - 1
+      return {
+        pool: Array.from(activeRemoteDynamicPools.values())[remoteIndex],
+        mark: ResizeMachine.Remote,
+        remoteIndex,
+        ip: remoteServer[remoteIndex].ip,
+        port: remoteServer[remoteIndex].port,
       }
     }
-    return ans
   }
 }
 
@@ -272,10 +276,19 @@ callRpc(
 
                         let cost = undefined
                         // thread
-                        let selectedPool = randomDispatcher()
-                        if (!selectedPool || !selectedPool.pool) {
-                          console.log('getPool', selectedPool)
-                          return quit('Empty getPool.pool')
+                        let selectedPool = undefined
+                        while (!selectedPool || !selectedPool.pool) {
+                          selectedPool = randomDispatcher()
+                          if (!poolIsIdle(selectedPool.pool)) {
+                            selectedPool = undefined
+                            if (
+                              getAllUsablePools().every(
+                                (pool) => !poolIsIdle(pool)
+                              )
+                            ) {
+                              await sleep(100)
+                            }
+                          }
                         }
                         let isLocal = selectedPool.mark === ResizeMachine.Local
 
@@ -291,6 +304,22 @@ callRpc(
                           )
 
                           try {
+                            // console.log('localDynamicPool', localDynamicPool)
+                            // console.log(
+                            //   'activeRemoteDynamicPools',
+                            //   activeRemoteDynamicPools
+                            // )
+                            // console.log(
+                            //   'inactiveRemoteDynamicPools',
+                            //   inactiveRemoteDynamicPools
+                            // )
+                            // if (!poolIsIdle(selectedPool.pool)) {
+                            //   console.log(
+                            //     `wait for pool idle cost ${(
+                            //       await waitForPoolIdle(selectedPool.pool)
+                            //     ).toFixed(3)}sec`
+                            //   )
+                            // }
                             cost = await selectedPool.pool.exec({
                               task: isLocal
                                 ? ({ sourcePath, destPath }) => {
@@ -321,10 +350,22 @@ callRpc(
                           } catch (error) {
                             const oldSelectedPool = { ...selectedPool }
                             const oldIsLocal = isLocal
-                            selectedPool = randomDispatcher(selectedPool.pool)
-                            if (!selectedPool || !selectedPool.pool) {
-                              console.log('getPool', selectedPool)
-                              return quit('Empty getPool.pool')
+                            selectedPool = undefined
+                            while (!selectedPool || !selectedPool.pool) {
+                              selectedPool = randomDispatcher()
+                              if (
+                                selectedPool.pool === oldSelectedPool.pool ||
+                                !poolIsIdle(selectedPool.pool)
+                              ) {
+                                selectedPool = undefined
+                                if (
+                                  getAllUsablePools().every(
+                                    (pool) => !poolIsIdle(pool)
+                                  )
+                                ) {
+                                  await sleep(100)
+                                }
+                              }
                             }
                             isLocal = selectedPool.mark === ResizeMachine.Local
                             retried++

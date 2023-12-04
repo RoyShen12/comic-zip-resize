@@ -47,7 +47,7 @@ function callRpcInner(callId, client, name, args, callback, timeout) {
         Retries[callId] = 0
         callback(
           new Error(
-            `Timeout error to call remote server, call id ${callId}, timeout ${timeout}ms`
+            `Timeout error to call remote server, call id ${callId}, timeout ${timeout}ms, server ${client?.sock?.server}`
           )
         )
       }, timeout)
@@ -239,6 +239,35 @@ module.exports = {
       )} cost: ${chalk.yellowBright(
         cost.toFixed(3)
       )} sec, speed: ${chalk.redBright(processSpeed.toFixed(1))} K/s`
+    )
+  },
+  workerUtilization(pool) {
+    return pool.workers.map(
+      (w) =>
+        `${(w.performance.eventLoopUtilization().utilization * 100).toFixed(
+          2
+        )}%`
+    )
+  },
+  poolIsIdle(pool) {
+    return pool.workers.some((w) => w.ready)
+  },
+  async waitForPoolIdle(pool) {
+    const waitStart = process.hrtime.bigint()
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (pool.workers.some((w) => w.ready)) {
+          clearInterval(Number(checkInterval))
+          resolve(Number(process.hrtime.bigint() - waitStart) / 1e9)
+        }
+      }, 100)
+    })
+  },
+  async sleep(ms) {
+    return new Promise((res) =>
+      setTimeout(() => {
+        res(undefined)
+      }, ms)
     )
   },
 }
