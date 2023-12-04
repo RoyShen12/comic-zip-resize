@@ -18,7 +18,7 @@ const {
 const callRpcInner = require('./call-rpc-inner')
 const ServerInfo = require('./server-info')
 
-async function imgReadWithRetry(source, maxRetries = MAX_RETRY) {
+async function jimpReadImage(source, maxRetries = MAX_RETRY) {
   let retries = 0
 
   while (retries < maxRetries) {
@@ -49,30 +49,54 @@ module.exports = {
     const callId = uuidV4()
     callRpcInner(callId, client, name, args, callback, timeout)
   },
+  /**
+   * @param {string | Buffer} source
+   * @param {string} [writeDestPath]
+   * @returns {Promise<Buffer>}
+   */
   async imgScaleWithRetry(source, writeDestPath, maxRetries = MAX_RETRY) {
-    const jimpInst = await imgReadWithRetry(source)
-
-    let retries = 0
-
-    while (retries < maxRetries) {
-      try {
-        return writeDestPath
-          ? await jimpInst
-              .scale(SHARP_RATIO)
-              .quality(80)
-              .writeAsync(writeDestPath)
-          : await jimpInst
-              .scale(SHARP_RATIO)
-              .quality(80)
-              .getBufferAsync(Jimp.MIME_JPEG)
-      } catch (error) {
-        console.error(error)
-        retries++
-        continue
-      }
+    const sharpInst = sharp(source)
+    const meta = await sharpInst.metadata()
+    if (!meta.width) {
+      throw new Error('sharpInst.metadata.width not found')
     }
+    const targetWidth = Math.round(meta.width * SHARP_RATIO)
+    const resizedSharpInst = sharpInst
+      .resize(targetWidth, null, {
+        kernel: 'lanczos3',
+      })
+      .jpeg({
+        quality: 80,
+      })
+    // @ts-ignore
+    return writeDestPath
+      ? await resizedSharpInst.toFile(writeDestPath)
+      : await resizedSharpInst.toBuffer()
 
-    throw new Error('jimpInst.scale max retries')
+    // const jimpInst = await jimpReadImage(source)
+
+    // let retries = 0
+
+    // while (retries < maxRetries) {
+    //   try {
+    //     // @ts-ignore
+    //     return writeDestPath
+    //       ? await jimpInst
+    //           .scale(SHARP_RATIO)
+    //           .quality(80)
+    //           .writeAsync(writeDestPath)
+    //       : await jimpInst
+    //           .scale(SHARP_RATIO)
+    //           .quality(80)
+    //           .getBufferAsync(Jimp.MIME_JPEG)
+    //   } catch (error) {
+    //     console.error(error)
+    //     retries++
+    //     continue
+    //   }
+    // }
+
+    // throw new Error('jimpInst.scale max retries')
   },
   logBeforeResize(
     thisIndex,

@@ -83,10 +83,6 @@ server.expose(
             )
           )
 
-          /**
-           * @type {Buffer}
-           */
-          // @ts-ignore
           const resultBuffer = await imgScaleWithRetry(buffer)
 
           const resultSize = resultBuffer.byteLength
