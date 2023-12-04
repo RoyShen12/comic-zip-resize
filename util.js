@@ -17,6 +17,7 @@ const {
   MAX_RETRY,
   JPEG_MAX_MEM,
   RPC_TIMEOUT,
+  isNodeLargerThan16,
 } = require('./config')
 
 const callRpcInner = require('./call-rpc-inner')
@@ -36,10 +37,6 @@ async function jimpReadImage(source, maxRetries = MAX_RETRY) {
   }
 
   throw new Error('jimp.read max retries')
-}
-
-function isNodeLargerThan16() {
-  return Number(process.versions.node.split('.')[0]) > 16
 }
 
 module.exports = {

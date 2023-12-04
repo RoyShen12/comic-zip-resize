@@ -1,6 +1,10 @@
 const os = require('os')
 const path = require('path')
 
+function isNodeLargerThan16() {
+  return Number(process.versions.node.split('.')[0]) > 16
+}
+
 module.exports = {
   TMP_PATH:
     os.platform() === 'darwin'
@@ -15,14 +19,14 @@ module.exports = {
     ip: '192.168.50.59',
     port: 4004,
   },
-  // localThread:
-  //   os.platform() === 'darwin'
-  //     ? os.cpus().length - 1
-  //     : Math.max(1, os.cpus().length - 4),
-  localThread: 0,
+  localThread: isNodeLargerThan16()
+    ? os.cpus().length - 1
+    : Math.max(1, os.cpus().length - 4),
   REMOTE_CONFIG_REFRESH: 1000,
   REMOTE_CONFIG_TIMEOUT: 300,
   REGISTRY_TIMEOUT: 600,
   ALIVE_TIMEOUT: 600,
   ALIVE_INTERVAL: 2000,
+
+  isNodeLargerThan16,
 }
