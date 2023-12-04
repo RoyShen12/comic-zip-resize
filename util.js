@@ -198,6 +198,28 @@ module.exports = {
       )} sec, speed: ${chalk.redBright(processSpeed.toFixed(1))} K/s`
     )
   },
+  logAfterSkipped(
+    thisIndex,
+    fileIndex,
+    processedEntry,
+    entryCount,
+    filePath,
+    entry
+  ) {
+    console.log(
+      `<${String(thisIndex).padStart(
+        String(fileIndex).length,
+        ' '
+      )}> ${chalk.greenBright('resizing file')} (${String(
+        processedEntry
+      ).padStart(3, ' ')}/${String(entryCount).padStart(
+        3,
+        ' '
+      )}) ${path.basename(filePath)}/${chalk.blueBright(
+        entry.fileName
+      )} ${chalk.greenBright('size too small, skipped')}`
+    )
+  },
   workerUtilization(pool) {
     return pool.workers.map(
       (w) =>

@@ -12,6 +12,8 @@ module.exports = {
       ? path.resolve(os.homedir(), 'temp/image')
       : path.resolve(os.homedir(), 'bin/temp/image'),
 
+  // 只处理尺寸大于此的图片
+  SHARP_MIN_SIZE: 1 * 1024, // 单位 KByte
   // 图片缩小比例
   SHARP_RATIO: 0.5,
   // 缩放最大尝试次数
