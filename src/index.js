@@ -8,19 +8,18 @@ const archiver = require('archiver')
 const chalk = require('chalk')
 const yauzl = require('yauzl')
 const { v4: uuidV4 } = require('uuid')
-const { DynamicPool } = require('node-worker-threads-pool')
 
 const {
-  ResizeMachine,
   quit,
-  sleep,
   callRpc,
   logBeforeResize,
   logAfterResize,
   logWhileChangeServer,
-  poolIsIdle,
-  waitForPoolIdle,
   logAfterSkipped,
+  logStartFileProcess,
+  createRandomPicker,
+  closeAllPools,
+  choosePool,
 } = require('./util')
 
 const workingDir = process.argv[2]
@@ -29,101 +28,24 @@ if (!workingDir) {
   quit('working dir is empty')
 }
 
-const rpc = require('axon-rpc')
+const configRpc = require('axon-rpc')
 const axon = require('axon')
-
-const Solution = require('./random-with-weight')
 
 const {
   TMP_PATH,
-  localThread: localThreadsCount,
   registryServer,
   REMOTE_CONFIG_REFRESH,
   REMOTE_CONFIG_TIMEOUT,
   SHARP_MIN_SIZE,
+  SHARP_FILE_NAME_SUFFIX,
 } = require('./config')
-
-const localDynamicPool =
-  localThreadsCount > 0 ? new DynamicPool(localThreadsCount) : null
-/**
- * @type {Map<string, DynamicPool>}
- */
-const activeRemoteDynamicPools = new Map()
-/**
- * @type {Map<string, DynamicPool>}
- */
-const inactiveRemoteDynamicPools = new Map()
-
-const getAllUsablePools = () =>
-  localDynamicPool
-    ? [localDynamicPool, ...activeRemoteDynamicPools.values()]
-    : [...activeRemoteDynamicPools.values()]
-
-/**
- * @param {{ip: string; port: number; threads: number}[]} remoteServer
- */
-const createRandomPicker = (remoteServer) => {
-  remoteServer.forEach((srv) => {
-    const ipPort = `${srv.ip}:${srv.port}`
-    if (!activeRemoteDynamicPools.has(ipPort)) {
-      /**
-       * @type {DynamicPool}
-       */
-      // @ts-ignore
-      const pool = inactiveRemoteDynamicPools.has(ipPort)
-        ? inactiveRemoteDynamicPools.get(ipPort)
-        : new DynamicPool(srv.threads)
-      inactiveRemoteDynamicPools.delete(ipPort)
-      activeRemoteDynamicPools.set(ipPort, pool)
-    }
-  })
-
-  activeRemoteDynamicPools.forEach((pool, ipPort) => {
-    if (
-      remoteServer.findIndex((srv) => {
-        const remoteIpPort = `${srv.ip}:${srv.port}`
-        return remoteIpPort === ipPort
-      }) === -1
-    ) {
-      inactiveRemoteDynamicPools.set(ipPort, pool)
-      activeRemoteDynamicPools.delete(ipPort)
-    }
-  })
-
-  const threadWeight = [
-    localThreadsCount,
-    ...Array.from(activeRemoteDynamicPools.keys()).map((ipPort) => {
-      const ip = ipPort.split(':')[0]
-      return remoteServer.find((srv) => srv.ip === ip)?.threads
-    }),
-  ]
-  const randomMachine = new Solution(threadWeight)
-
-  /**
-   * @returns {{pool: DynamicPool | null; mark: number; remoteIndex?: number; ip?: string; port?: number}}
-   */
-  return () => {
-    const index = randomMachine.pickIndex()
-
-    if (index === 0) {
-      return { pool: localDynamicPool, mark: ResizeMachine.Local }
-    } else {
-      const remoteIndex = index - 1
-      return {
-        pool: Array.from(activeRemoteDynamicPools.values())[remoteIndex],
-        mark: ResizeMachine.Remote,
-        remoteIndex,
-        ip: remoteServer[remoteIndex].ip,
-        port: remoteServer[remoteIndex].port,
-      }
-    }
-  }
-}
 
 // request registry server for remote server information
 const configServerSocket = axon.socket('req')
-const configServerClient = new rpc.Client(configServerSocket)
+const configServerClient = new configRpc.Client(configServerSocket)
 configServerSocket.connect(registryServer.port, registryServer.ip)
+
+let fileIndex = 0
 
 callRpc(
   configServerClient,
@@ -139,31 +61,15 @@ callRpc(
       quit('get "getMethodConfig" failed!')
     }
 
-    console.log('fetch remoteServer', remoteServer)
-
-    let randomDispatcher = createRandomPicker(remoteServer)
-
-    const getConfigInst = setInterval(() => {
+    const randomDispatcher = { fn: createRandomPicker(remoteServer) }
+    const getConfigTimer = setInterval(() => {
       callRpc(
         configServerClient,
         'getMethodConfig',
         ['resize'],
         (err, remoteServer) => {
           if (!err && remoteServer) {
-            // console.log(
-            //   'refresh remote server list',
-            //   remoteServer
-            //     .map(
-            //       (s) =>
-            //         `${chalk.greenBright(
-            //           `${s.ip}:${s.port}`
-            //         )}@${chalk.yellowBright(`${s.threads}C`)}`
-            //     )
-            //     .join(','),
-            //   'all pools',
-            //   getAllUsablePools().length
-            // )
-            randomDispatcher = createRandomPicker(remoteServer)
+            randomDispatcher.fn = createRandomPicker(remoteServer)
           }
         },
         REMOTE_CONFIG_TIMEOUT
@@ -192,35 +98,32 @@ callRpc(
       // await Promise.all(subFiles.map(async (subFile) => {}))
     }
 
-    let fileIndex = 0
-
-    // make 0.5x zip with (LowQuality) file name
+    /**
+     * make 0.5x zip with $SHARP_FILE_NAME_SUFFIX file name
+     * @param {string} filePath
+     */
     async function scanZipFile(filePath) {
       const fileBaseName = path.basename(filePath)
       const filePathParsed = path.parse(filePath)
-      const fileLowQualityPath = `${filePathParsed.dir}/${filePathParsed.name} (LowQuality)${filePathParsed.ext}`
+      const fileLowQualityPath = `${filePathParsed.dir}/${filePathParsed.name} ${SHARP_FILE_NAME_SUFFIX}${filePathParsed.ext}`
 
       if (
-        !fileBaseName.includes('(LowQuality)') &&
+        !fileBaseName.includes(SHARP_FILE_NAME_SUFFIX) &&
         (await fs.readdir(filePathParsed.dir))
           .filter((fp) => fp !== fileBaseName)
-          .every((fp) => {
-            return path.parse(fp).name !== path.parse(fileLowQualityPath).name
-          })
+          .every(
+            (fp) => path.parse(fp).name !== path.parse(fileLowQualityPath).name
+          )
       ) {
         fileIndex++
         const thisIndex = fileIndex
         const id = uuidV4()
         const tempPath = path.resolve(TMP_PATH, id)
         await fs.mkdir(tempPath, { recursive: true })
-        console.log(
-          `process file: ${chalk.cyanBright(filePath)} -> ${chalk.whiteBright(
-            tempPath
-          )}`
-        )
+        logStartFileProcess(filePath, tempPath)
 
         // promise of unzip and write files and resize files
-        const hasNoChange = await new Promise((res, rej) => {
+        const hasNoChange = await new Promise((unzipRes, unzipRej) => {
           yauzl.open(
             filePath,
             {
@@ -232,7 +135,7 @@ callRpc(
             },
             (err, zipFile) => {
               if (err) {
-                rej(err)
+                unzipRej(err)
                 return
               }
 
@@ -278,7 +181,7 @@ callRpc(
 
                     zipFile.openReadStream(entry, function (err, readStream) {
                       if (err) {
-                        rej(err)
+                        unzipRej(err)
                         return
                       }
 
@@ -294,7 +197,7 @@ callRpc(
 
                         entryWriteStream.close(async (err) => {
                           if (err) {
-                            rej(err)
+                            unzipRej(err)
                             return
                           }
 
@@ -304,23 +207,9 @@ callRpc(
                           if (sourceSize >= SHARP_MIN_SIZE * 1024) {
                             let cost = undefined
                             // thread
-                            let selectedPool = undefined
-                            while (!selectedPool || !selectedPool.pool) {
-                              selectedPool = randomDispatcher()
-                              if (!poolIsIdle(selectedPool.pool)) {
-                                selectedPool = undefined
-                                if (
-                                  getAllUsablePools().length === 0 ||
-                                  getAllUsablePools().every(
-                                    (pool) => !poolIsIdle(pool)
-                                  )
-                                ) {
-                                  await sleep(100)
-                                }
-                              }
-                            }
-                            let isLocal =
-                              selectedPool.mark === ResizeMachine.Local
+                            let [selectedPool, isLocal] = await choosePool(
+                              () => randomDispatcher
+                            )
 
                             let retried = 0
                             while (cost === undefined) {
@@ -358,28 +247,13 @@ callRpc(
                               } catch (error) {
                                 const oldSelectedPool = { ...selectedPool }
                                 const oldIsLocal = isLocal
-                                selectedPool = undefined
-                                while (!selectedPool || !selectedPool.pool) {
-                                  selectedPool = randomDispatcher()
-                                  if (
-                                    selectedPool.pool ===
-                                      oldSelectedPool.pool ||
-                                    !poolIsIdle(selectedPool.pool)
-                                  ) {
-                                    selectedPool = undefined
-                                    if (
-                                      getAllUsablePools().length === 0 ||
-                                      getAllUsablePools().every(
-                                        (pool) => !poolIsIdle(pool)
-                                      )
-                                    ) {
-                                      await sleep(100)
-                                    }
-                                  }
-                                }
-                                isLocal =
-                                  selectedPool.mark === ResizeMachine.Local
+
+                                ;[selectedPool, isLocal] = await choosePool(
+                                  () => randomDispatcher,
+                                  oldSelectedPool
+                                )
                                 retried++
+
                                 logWhileChangeServer(
                                   thisIndex,
                                   fileIndex,
@@ -426,7 +300,7 @@ callRpc(
                           }
 
                           if (processedEntries >= getActualFileCount()) {
-                            res(skippedEntries === getActualFileCount())
+                            unzipRes(skippedEntries === getActualFileCount())
                           }
                         })
                       })
@@ -465,7 +339,7 @@ callRpc(
           )
         } else {
           // promise of zip resized files
-          await new Promise((res, rej) => {
+          await new Promise((zipRes, zipRej) => {
             const output = createWriteStream(fileLowQualityPath)
             const archive = archiver('zip', {
               zlib: {
@@ -481,7 +355,7 @@ callRpc(
                   `${(archive.pointer() / 1e6).toFixed(1)} MB`
                 )}`
               )
-              res(undefined)
+              zipRes(undefined)
             })
 
             archive.on('warning', function (err) {
@@ -489,12 +363,12 @@ callRpc(
                 console.log(chalk.redBright('archive on warning: ENOENT'))
                 console.error(err)
               } else {
-                rej(err)
+                zipRej(err)
               }
             })
 
             archive.on('error', function (err) {
-              rej(err)
+              zipRej(err)
             })
 
             archive.pipe(output)
@@ -515,10 +389,8 @@ callRpc(
 
     scanDirectory(workingDir)
       .then(() => {
-        clearInterval(Number(getConfigInst))
-        localDynamicPool?.destroy()
-        activeRemoteDynamicPools.forEach((p) => p.destroy())
-        inactiveRemoteDynamicPools.forEach((p) => p.destroy())
+        clearInterval(Number(getConfigTimer))
+        closeAllPools()
         return fs.readdir(TMP_PATH)
       })
       .then((fileNodes) =>

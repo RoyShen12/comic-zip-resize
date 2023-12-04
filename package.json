@@ -5,8 +5,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "server": "node dedicated-processor-server.js",
-    "registry": "node registry-center.js"
+    "server": "node src/dedicated-processor-server.js",
+    "registry": "node src/registry-center.js"
   },
   "author": "",
   "license": "ISC",

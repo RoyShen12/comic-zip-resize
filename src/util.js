@@ -1,4 +1,3 @@
-const path = require('path')
 const chalk = require('chalk')
 const { v4: uuidV4 } = require('uuid')
 
@@ -22,7 +21,11 @@ if (!isNodeLargerThan16()) {
 }
 
 const callRpcInner = require('./call-rpc-inner')
-const ServerInfo = require('./server-info')
+
+const constants = require('./constants')
+const logHelpers = require('./log-helper')
+const zipHelpers = require('./zip-helper')
+const threadsHelpers = require('./threads-helper')
 
 async function jimpReadImage(source, maxRetries = MAX_RETRY) {
   let retries = 0
@@ -41,15 +44,11 @@ async function jimpReadImage(source, maxRetries = MAX_RETRY) {
 }
 
 module.exports = {
-  ServerInfo,
+  Solution: require('./random-with-weight'),
+  ServerInfo: require('./server-info'),
   quit: function (msg = 'error & quit', code = 2) {
     console.log(chalk.redBright(msg))
     process.exit(code)
-  },
-  // enum
-  ResizeMachine: {
-    Local: 1,
-    Remote: 2,
   },
   callRpc(client, name, args, callback, timeout = RPC_TIMEOUT) {
     const callId = uuidV4()
@@ -118,109 +117,6 @@ module.exports = {
       throw new Error('jimpInst.scale max retries')
     }
   },
-  logBeforeResize(
-    thisIndex,
-    fileIndex,
-    filePath,
-    entry,
-    isLocal,
-    selectedPool
-  ) {
-    return
-    console.log(
-      `<${String(thisIndex).padStart(
-        String(fileIndex).length,
-        ' '
-      )}> ${path.basename(filePath)}/${chalk.blueBright(
-        entry.fileName
-      )} dispatch to [${
-        isLocal
-          ? chalk.magentaBright('L ')
-          : chalk.cyanBright('R' + selectedPool.remoteIndex)
-      }]`
-    )
-  },
-  logWhileChangeServer(
-    thisIndex,
-    fileIndex,
-    filePath,
-    entry,
-    isLocal,
-    selectedPool,
-    oldIsLocal,
-    oldSelectedPool,
-    retried,
-    error
-  ) {
-    console.error(error.message)
-    console.log(
-      `<${String(thisIndex).padStart(
-        String(fileIndex).length,
-        ' '
-      )}> ${path.basename(filePath)}/${chalk.blueBright(
-        entry.fileName
-      )} ${chalk.redBright('Re')}dispatch from [${
-        oldIsLocal
-          ? chalk.magentaBright('L ')
-          : chalk.cyanBright('R' + oldSelectedPool.remoteIndex)
-      }] --> [${
-        isLocal
-          ? chalk.magentaBright('L ')
-          : chalk.cyanBright('R' + selectedPool.remoteIndex)
-      }] (retried ${chalk.redBright(retried)})`
-    )
-  },
-  logAfterResize(
-    thisIndex,
-    fileIndex,
-    isLocal,
-    selectedPool,
-    processedEntry,
-    entryCount,
-    filePath,
-    entry,
-    cost,
-    processSpeed
-  ) {
-    console.log(
-      `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> [${
-        isLocal
-          ? chalk.magentaBright('L ')
-          : chalk.cyanBright('R' + selectedPool.remoteIndex)
-      }] ${chalk.greenBright('resizing file')} (${String(
-        processedEntry
-      ).padStart(3, ' ')}/${String(entryCount).padStart(
-        3,
-        ' '
-      )}) ${path.basename(filePath)}/${chalk.blueBright(
-        entry.fileName
-      )} cost: ${chalk.yellowBright(
-        cost.toFixed(3)
-      )} sec, speed: ${chalk.redBright(processSpeed.toFixed(1))} K/s`
-    )
-  },
-  logAfterSkipped(
-    thisIndex,
-    fileIndex,
-    processedEntry,
-    entryCount,
-    filePath,
-    entry
-  ) {
-    console.log(
-      `<${String(thisIndex).padStart(
-        String(fileIndex).length,
-        ' '
-      )}> ${chalk.greenBright('resizing file')} (${String(
-        processedEntry
-      ).padStart(3, ' ')}/${String(entryCount).padStart(
-        3,
-        ' '
-      )}) ${path.basename(filePath)}/${chalk.blueBright(
-        entry.fileName
-      )} ${chalk.greenBright('size too small, skipped')}`
-    )
-  },
   workerUtilization(pool) {
     return pool.workers.map(
       (w) =>
@@ -253,4 +149,8 @@ module.exports = {
       }, ms)
     )
   },
+  ...constants,
+  ...logHelpers,
+  ...zipHelpers,
+  ...threadsHelpers,
 }
