@@ -5,6 +5,7 @@ const rpc = require('axon-rpc')
 const axon = require('axon')
 
 const { callRpc } = require('./util')
+const { RPC_TIMEOUT } = require('./config')
 
 const clients = new Map()
 // remoteServer.map((srv) => {
@@ -58,7 +59,7 @@ module.exports = async function (sourcePath, destPath, ip, port) {
               })
               .catch((err) => rej(err))
           },
-          (fContent.byteLength / (100 * 2014)) * 1000 /** 100k/s */
+          RPC_TIMEOUT //(fContent.byteLength / (100 * 2014)) * 1000 /** 100k/s */
         )
       })
       .catch((err) => rej(err))

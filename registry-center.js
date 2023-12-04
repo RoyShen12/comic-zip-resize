@@ -154,10 +154,11 @@ setInterval(() => {
 
   const now = new Date()
   console.log(
+    chalk.cyanBright(`${now.toLocaleString()}.${now.getMilliseconds()}  `),
     [...statusMap]
       .map(
         (status) =>
-          `${now.toLocaleString()}.${now.getMilliseconds()} ${status[0]} (${
+          `${status[0]}:${serverMap.get(status[0])?.defaultPort} (${
             status[1] ? chalk.greenBright('online') : chalk.redBright('  down')
           })`
       )
