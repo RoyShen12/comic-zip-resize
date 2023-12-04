@@ -64,23 +64,35 @@ module.exports = {
    */
   async imgScaleWithRetry(source, writeDestPath, maxRetries = MAX_RETRY) {
     if (isNodeLargerThan16()) {
-      const sharpInst = sharp(source)
-      const meta = await sharpInst.metadata()
-      if (!meta.width) {
-        throw new Error('sharpInst.metadata.width not found')
+      let retries = 0
+
+      while (retries < maxRetries) {
+        try {
+          const sharpInst = sharp(source)
+          const meta = await sharpInst.metadata()
+          if (!meta.width) {
+            throw new Error('sharpInst.metadata.width not found')
+          }
+          const targetWidth = Math.round(meta.width * SHARP_RATIO)
+          const resizedSharpInst = sharpInst
+            .resize(targetWidth, null, {
+              kernel: 'lanczos3',
+            })
+            .jpeg({
+              quality: 80,
+            })
+          // @ts-ignore
+          return writeDestPath
+            ? await resizedSharpInst.toFile(writeDestPath)
+            : await resizedSharpInst.toBuffer()
+        } catch (error) {
+          console.error(error)
+          retries++
+          continue
+        }
       }
-      const targetWidth = Math.round(meta.width * SHARP_RATIO)
-      const resizedSharpInst = sharpInst
-        .resize(targetWidth, null, {
-          kernel: 'lanczos3',
-        })
-        .jpeg({
-          quality: 80,
-        })
-      // @ts-ignore
-      return writeDestPath
-        ? await resizedSharpInst.toFile(writeDestPath)
-        : await resizedSharpInst.toBuffer()
+
+      throw new Error('sharp.resize max retries')
     } else {
       const jimpInst = await jimpReadImage(source)
 
