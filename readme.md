@@ -1,4 +1,4 @@
-# Node.js RPC 集群（用于漫画 zip 包批量制作缩放版本副本）
+# Node.js RPC 集群（用于漫画 zip 包批量制作低分辨率版本副本）
 
 ## 启动
 
@@ -6,6 +6,7 @@
 2. 启动注册中心 `npm run registry`
 3. 启动计算服务 Provider `npm run server`
 4. 启动主服务 `node index.js /path/to/your/comic_zip_files`
+5. 主服务会遍历目录下的所以 zip 文件、解压、交给计算服务将每张图像缩小 `config.js SHARP_RATIO`X，重新压缩并写入原压缩文件目录，添加 (LowQuality) 文件名
 
 ## 注意
 
