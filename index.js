@@ -70,7 +70,7 @@ const createRandomPicker = (remoteServer) => {
       // @ts-ignore
       const pool = inactiveRemoteDynamicPools.has(ipPort)
         ? inactiveRemoteDynamicPools.get(ipPort)
-        : new DynamicPool(srv.threads)
+        : new DynamicPool(srv.threads * 2)
       inactiveRemoteDynamicPools.delete(ipPort)
       activeRemoteDynamicPools.set(ipPort, pool)
     }
