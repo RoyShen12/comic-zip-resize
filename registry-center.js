@@ -8,7 +8,12 @@ const server = new rpc.Server(respSocket)
 respSocket.bind(4004, '0.0.0.0')
 
 const { callRpc } = require('./util')
-const { ALIVE_TIMEOUT, ALIVE_INTERVAL, JPEG_MAX_MEM } = require('./config')
+const {
+  ALIVE_TIMEOUT,
+  ALIVE_INTERVAL,
+  JPEG_MAX_MEM,
+  serverWorkerThread,
+} = require('./config')
 
 /**
  * @type {Map<string, Set<string>>}
@@ -127,7 +132,7 @@ server.expose(
               ...server,
               threads:
                 Number(info?.nodeVersion.split('.')[0]) > 16
-                  ? 1
+                  ? serverWorkerThread
                   : Math.min((info?.cpuNum || 2) - 1, memCapacity - 1),
             }
           })

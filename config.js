@@ -35,8 +35,8 @@ module.exports = {
   localThread: isNodeLargerThan16() ? 1 : Math.max(1, os.cpus().length - 3),
   serverWorkerThread: isNodeLargerThan16()
     ? os.cpus().length > 16
-      ? 2
-      : 1
+      ? 3
+      : 2
     : os.cpus().length,
   // localThread: 0,
 
