@@ -125,7 +125,10 @@ server.expose(
             // )
             return {
               ...server,
-              threads: Math.min((info?.cpuNum || 2) - 1, memCapacity - 1),
+              threads:
+                Number(info?.nodeVersion.split('.')[0]) > 16
+                  ? 1
+                  : Math.min((info?.cpuNum || 2) - 1, memCapacity - 1),
             }
           })
       )
