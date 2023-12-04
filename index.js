@@ -34,7 +34,6 @@ const axon = require('axon')
 const Solution = require('./random-with-weight')
 
 const {
-  JPEG_MAX_MEM,
   TMP_PATH,
   localThread: localThreadsCount,
   registryServer,
@@ -488,6 +487,7 @@ callRpc(
       )
       .then(() => {
         configServerSocket.close()
+        process.exit(0)
       })
   },
   REMOTE_CONFIG_TIMEOUT
