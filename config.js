@@ -16,7 +16,7 @@ module.exports = {
     port: 4004,
   },
   // localThread: Math.max(1, os.cpus().length - 4),
-  localThread: 0,
+  localThread: 1,
   REMOTE_CONFIG_REFRESH: 1000,
   REMOTE_CONFIG_TIMEOUT: 300,
   REGISTRY_TIMEOUT: 600,

@@ -1,4 +1,4 @@
-const { imgScaleWithRetry, imgReadWithRetry } = require('./util')
+const { imgScaleWithRetry } = require('./util')
 const fsModule = require('fs')
 const fs = fsModule.promises
 
@@ -9,9 +9,7 @@ const fs = fsModule.promises
 module.exports = async function (sourcePath, destPath) {
   const s = process.hrtime.bigint()
 
-  const jimpInst = await imgReadWithRetry(sourcePath)
-
-  await imgScaleWithRetry(jimpInst, destPath)
+  await imgScaleWithRetry(sourcePath, destPath)
 
   await fs.rm(sourcePath)
 

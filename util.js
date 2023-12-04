@@ -2,110 +2,36 @@ const path = require('path')
 const chalk = require('chalk')
 const Jimp = require('jimp')
 const JPEG = require('jpeg-js')
+// expand jpeg memory
+Jimp.decoders['image/jpeg'] = (data) =>
+  JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
 const { v4: uuidV4 } = require('uuid')
+const sharp = require('sharp')
 
 const {
   SHARP_RATIO,
   MAX_RETRY,
   JPEG_MAX_MEM,
-  RPC_MAX_RETRY,
   RPC_TIMEOUT,
 } = require('./config')
 
-// expand jpeg memory
-Jimp.decoders['image/jpeg'] = (data) =>
-  JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
+const callRpcInner = require('./call-rpc-inner')
+const ServerInfo = require('./server-info')
 
-const Retries = {}
-const timeoutCountdown = new Map()
-const alreadyTimeout = new Set()
+async function imgReadWithRetry(source, maxRetries = MAX_RETRY) {
+  let retries = 0
 
-/**
- *
- * @param {string} callId
- * @param {any} client
- * @param {string} name
- * @param {any[]} args
- * @param {(err?: Error | null, ...results: any[]) => void} callback
- * @param {number} timeout
- */
-function callRpcInner(callId, client, name, args, callback, timeout) {
-  if (process.env.RPC_LOG)
-    console.log(
-      `callRpcInner invoked, callId=${callId}, name=${name}, args=${JSON.stringify(
-        args,
-        null,
-        2
-      )}, timeout=${timeout}`
-    )
-
-  if (!timeoutCountdown.has(callId)) {
-    timeoutCountdown.set(
-      callId,
-      setTimeout(() => {
-        alreadyTimeout.add(callId)
-        Retries[callId] = 0
-        callback(
-          new Error(
-            `Timeout error to call remote server, call id ${callId}, timeout ${timeout}ms, server ${client?.sock?.server}`
-          )
-        )
-      }, timeout)
-    )
+  while (retries < maxRetries) {
+    try {
+      return await Jimp.read(source)
+    } catch (error) {
+      console.error(error)
+      retries++
+      continue
+    }
   }
 
-  client.call(name, ...args, (err, ...results) => {
-    if (alreadyTimeout.has(callId)) return
-
-    if (process.env.RPC_LOG)
-      console.log(`callRpcInner server response: `, err, results)
-    clearTimeout(timeoutCountdown.get(callId))
-
-    if (err) {
-      if (!Retries[callId]) {
-        Retries[callId] = 0
-      }
-
-      if (Retries[callId] < RPC_MAX_RETRY) {
-        setTimeout(() => {
-          Retries[callId]++
-          callRpcInner(callId, client, name, args, callback, timeout)
-        }, 100)
-      } else {
-        Retries[callId] = 0 // Reset retryCount
-        callback(err)
-      }
-    } else {
-      Retries[callId] = 0 // Reset retryCount
-      callback(null, ...results)
-    }
-  })
-}
-
-class ServerInfo {
-  /**
-   * @param {number} defaultPort
-   * @param {{method: string, port: number}[]} methods
-   */
-  constructor(defaultPort, methods) {
-    const os = require('os')
-
-    this.defaultPort = defaultPort
-    this.methods = methods
-
-    this.cpuNum = os.cpus().length
-    this.platform = os.platform()
-    this.freeMem = {
-      value: os.freemem(),
-      percent: os.freemem() / os.totalmem(),
-    }
-    this.network = Object.entries(os.networkInterfaces())
-      .map((n) => [
-        n[0],
-        n?.[1]?.filter((ni) => !ni.internal && ni.family === 'IPv4'),
-      ])
-      .filter((n) => n[1] && n[1].length > 0)?.[0]?.[1]?.[0]
-  }
+  throw new Error('jimp.read max retries')
 }
 
 module.exports = {
@@ -123,22 +49,9 @@ module.exports = {
     const callId = uuidV4()
     callRpcInner(callId, client, name, args, callback, timeout)
   },
-  async imgReadWithRetry(source, maxRetries = MAX_RETRY) {
-    let retries = 0
+  async imgScaleWithRetry(source, writeDestPath, maxRetries = MAX_RETRY) {
+    const jimpInst = await imgReadWithRetry(source)
 
-    while (retries < maxRetries) {
-      try {
-        return await Jimp.read(source)
-      } catch (error) {
-        console.error(error)
-        retries++
-        continue
-      }
-    }
-
-    throw new Error('jimp.read max retries')
-  },
-  async imgScaleWithRetry(jimpInst, writeDestPath, maxRetries = MAX_RETRY) {
     let retries = 0
 
     while (retries < maxRetries) {

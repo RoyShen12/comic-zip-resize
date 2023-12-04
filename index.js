@@ -31,13 +31,6 @@ if (!workingDir) {
 const rpc = require('axon-rpc')
 const axon = require('axon')
 
-const JPEG = require('jpeg-js')
-const Jimp = require('jimp')
-
-// expand jpeg memory
-Jimp.decoders['image/jpeg'] = (data) =>
-  JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
-
 const Solution = require('./random-with-weight')
 
 const {

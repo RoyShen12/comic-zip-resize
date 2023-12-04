@@ -67,7 +67,7 @@ server.expose(
           const { threadId } = require('worker_threads')
           const chalk = require('chalk')
 
-          const { imgScaleWithRetry, imgReadWithRetry } = require('./util')
+          const { imgScaleWithRetry } = require('./util')
 
           const buffer = Buffer.from(imgBuffer.data)
 
@@ -83,9 +83,11 @@ server.expose(
             )
           )
 
-          const jimpInst = await imgReadWithRetry(buffer)
-
-          const resultBuffer = await imgScaleWithRetry(jimpInst)
+          /**
+           * @type {Buffer}
+           */
+          // @ts-ignore
+          const resultBuffer = await imgScaleWithRetry(buffer)
 
           const resultSize = resultBuffer.byteLength
           const ratio = ((resultSize / inputSize) * 100).toFixed(1) + '%'
