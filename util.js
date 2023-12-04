@@ -1,6 +1,15 @@
 const path = require('path')
 const chalk = require('chalk')
 const { v4: uuidV4 } = require('uuid')
+
+const {
+  SHARP_RATIO,
+  MAX_RETRY,
+  JPEG_MAX_MEM,
+  RPC_TIMEOUT,
+  isNodeLargerThan16,
+} = require('./config')
+
 const Jimp = require('jimp')
 const JPEG = require('jpeg-js')
 let sharp
@@ -11,14 +20,6 @@ if (!isNodeLargerThan16()) {
 } else {
   sharp = require('sharp')
 }
-
-const {
-  SHARP_RATIO,
-  MAX_RETRY,
-  JPEG_MAX_MEM,
-  RPC_TIMEOUT,
-  isNodeLargerThan16,
-} = require('./config')
 
 const callRpcInner = require('./call-rpc-inner')
 const ServerInfo = require('./server-info')
