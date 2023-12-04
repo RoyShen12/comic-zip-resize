@@ -8,7 +8,11 @@ const chalk = require('chalk')
 
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const { registryServer, REGISTRY_TIMEOUT } = require('./config')
+const {
+  registryServer,
+  REGISTRY_TIMEOUT,
+  isNodeLargerThan16,
+} = require('./config')
 const registrySocket = axon.socket('req')
 const registryClient = new rpc.Client(registrySocket)
 registrySocket.connect(registryServer.port, registryServer.ip)
@@ -48,7 +52,7 @@ respSocket.bind(mainPort, '0.0.0.0')
 
 server.expose('alive', (fn) => fn(null, 'still'))
 
-const threadsPool = new DynamicPool(os.cpus().length * 2)
+const threadsPool = new DynamicPool(isNodeLargerThan16() ? 1 : os.cpus().length)
 
 let index = 0
 

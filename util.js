@@ -62,6 +62,7 @@ module.exports = {
    */
   async imgScaleWithRetry(source, writeDestPath, maxRetries = MAX_RETRY) {
     if (isNodeLargerThan16()) {
+      console.log('sharp.concurrency()', sharp.concurrency())
       let retries = 0
 
       while (retries < maxRetries) {

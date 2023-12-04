@@ -23,10 +23,8 @@ module.exports = {
     ip: '192.168.50.59',
     port: 4004,
   },
-  // localThread: isNodeLargerThan16()
-  //   ? os.cpus().length - 1
-  //   : Math.max(1, os.cpus().length - 4),
-  localThread: 0,
+  localThread: isNodeLargerThan16() ? 1 : Math.max(1, os.cpus().length - 3),
+  // localThread: 0,
   // 注册中心拉取配置间隔
   REMOTE_CONFIG_REFRESH: 1000,
   // 注册中心请求超时
