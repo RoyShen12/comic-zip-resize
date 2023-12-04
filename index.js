@@ -141,7 +141,7 @@ callRpc(
 
     let randomDispatcher = createRandomPicker(remoteServer)
 
-    setInterval(() => {
+    const getConfigInst = setInterval(() => {
       callRpc(
         configServerClient,
         'getMethodConfig',
@@ -475,6 +475,7 @@ callRpc(
 
     scanDirectory(workingDir)
       .then(() => {
+        clearInterval(Number(getConfigInst))
         localDynamicPool?.destroy()
         activeRemoteDynamicPools.forEach((p) => p.destroy())
         inactiveRemoteDynamicPools.forEach((p) => p.destroy())
