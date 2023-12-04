@@ -35,25 +35,31 @@ module.exports = async function (sourcePath, destPath, ip, port) {
           clients.set(ipPort, client)
         }
 
-        callRpc(clients.get(ipPort), 'resize', [fContent], (err, ret) => {
-          if (err || !ret) {
-            rej(err)
-            console.log(sourcePath, err)
-            return
-          }
+        callRpc(
+          clients.get(ipPort),
+          'resize',
+          [fContent],
+          (err, ret) => {
+            if (err || !ret) {
+              rej(err)
+              console.log(sourcePath, err)
+              return
+            }
 
-          fs.writeFile(destPath, Buffer.from(ret.data))
-            .then(() => {
-              const cost = Number(process.hrtime.bigint() - s) / 1e9
+            fs.writeFile(destPath, Buffer.from(ret.data))
+              .then(() => {
+                const cost = Number(process.hrtime.bigint() - s) / 1e9
 
-              fs.rm(sourcePath)
-                .then(() => {
-                  res(cost)
-                })
-                .catch((err) => rej(err))
-            })
-            .catch((err) => rej(err))
-        })
+                fs.rm(sourcePath)
+                  .then(() => {
+                    res(cost)
+                  })
+                  .catch((err) => rej(err))
+              })
+              .catch((err) => rej(err))
+          },
+          (fContent.byteLength / (100 * 2014)) * 1000 /** 100k/s */
+        )
       })
       .catch((err) => rej(err))
   })
