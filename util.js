@@ -1,12 +1,16 @@
 const path = require('path')
 const chalk = require('chalk')
+const { v4: uuidV4 } = require('uuid')
 const Jimp = require('jimp')
 const JPEG = require('jpeg-js')
-// expand jpeg memory
-Jimp.decoders['image/jpeg'] = (data) =>
-  JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
-const { v4: uuidV4 } = require('uuid')
-const sharp = require('sharp')
+let sharp
+if (!isNodeLargerThan16()) {
+  // expand jpeg memory
+  Jimp.decoders['image/jpeg'] = (data) =>
+    JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
+} else {
+  sharp = require('sharp')
+}
 
 const {
   SHARP_RATIO,
