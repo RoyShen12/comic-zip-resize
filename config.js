@@ -5,6 +5,9 @@ function isNodeLargerThan16() {
   return Number(process.versions.node.split('.')[0]) > 16
 }
 
+// jimp 单实例内存限制
+const JPEG_MAX_MEM = 1536
+
 module.exports = {
   // 临时目录
   TMP_PATH:
@@ -23,8 +26,7 @@ module.exports = {
   RPC_MAX_RETRY: 3,
   RPC_TIMEOUT: 15000,
 
-  // jimp 单实例内存限制
-  JPEG_MAX_MEM: 1536,
+  JPEG_MAX_MEM,
 
   // 注册中心地址，唯一需要配置的 ip 端口
   registryServer: {
@@ -32,12 +34,29 @@ module.exports = {
     port: 4004,
   },
 
-  localThread: isNodeLargerThan16() ? 1 : Math.max(1, os.cpus().length - 3),
-  serverWorkerThread: isNodeLargerThan16()
-    ? os.cpus().length > 16
-      ? 3
-      : 2
-    : os.cpus().length,
+  localThread: isNodeLargerThan16() ? 2 : Math.max(1, os.cpus().length - 3),
+  serverWorkerThread() {
+    if (isNodeLargerThan16()) {
+      // sharp
+      if (os.cpus().length > 24) {
+        return os.platform() === 'win32' ? 6 : 4
+      } else if (os.cpus().length > 16) {
+        return os.platform() === 'win32' ? 4 : 3
+      } else if (os.cpus().length > 12) {
+        return os.platform() === 'win32' ? 3 : 2
+      } else {
+        return os.platform() === 'win32' ? 2 : 1
+      }
+    } else {
+      // jimp
+      const memCapacity =
+        Math.floor(
+          (os.freemem() / (JPEG_MAX_MEM * 1024 * 1024)) *
+            (os.platform() === 'darwin' ? 1.5 : 1)
+        ) - (os.platform() === 'linux' ? 1 : 0)
+      return Math.min(os.cpus().length - 1, memCapacity - 1)
+    }
+  },
   // localThread: 0,
 
   // 注册中心拉取配置间隔

@@ -4,16 +4,12 @@ const rpc = require('axon-rpc')
 const axon = require('axon')
 const respSocket = axon.socket('rep')
 
+const { ALIVE_TIMEOUT, ALIVE_INTERVAL, registryServer } = require('./config')
+
 const server = new rpc.Server(respSocket)
-respSocket.bind(4004, '0.0.0.0')
+respSocket.bind(registryServer.port, '0.0.0.0')
 
 const { callRpc } = require('./util')
-const {
-  ALIVE_TIMEOUT,
-  ALIVE_INTERVAL,
-  JPEG_MAX_MEM,
-  serverWorkerThread,
-} = require('./config')
 
 /**
  * @type {Map<string, Set<string>>}
@@ -118,22 +114,9 @@ server.expose(
             return statusMap.get(server.ip)
           })
           .map((server) => {
-            const info = serverMap.get(server.ip)
-            const memCapacity = info
-              ? Math.floor(
-                  (info.freeMem.value / (JPEG_MAX_MEM * 1024 * 1024)) *
-                    (info.platform === 'darwin' ? 1.5 : 1)
-                ) - (info.platform === 'linux' ? 1 : 0)
-              : 2
-            // console.log(
-            //   `memCapacity=${memCapacity},cpuNum=${info?.cpuNum || 2}`
-            // )
             return {
               ...server,
-              threads:
-                Number(info?.nodeVersion.split('.')[0]) > 16
-                  ? serverWorkerThread
-                  : Math.min((info?.cpuNum || 2) - 1, memCapacity - 1),
+              threads: serverMap.get(server.ip)?.threadsCapacity || 1,
             }
           })
       )

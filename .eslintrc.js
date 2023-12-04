@@ -20,7 +20,14 @@ module.exports = {
     ecmaVersion: 'latest',
   },
   rules: {
-    'no-unused-vars': 0,
-    // 'no-magic-numbers': 1,
+    'no-unused-vars': 1,
+    'no-magic-numbers': [
+      'warn',
+      {
+        ignore: [
+          -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 60, 80, 100, 1e3, 1024, 1e9,
+        ],
+      },
+    ],
   },
 }

@@ -1,5 +1,4 @@
 const { promises: fs } = require('fs')
-const { threadId } = require('worker_threads')
 
 const rpc = require('axon-rpc')
 const axon = require('axon')
@@ -24,9 +23,6 @@ module.exports = async function (sourcePath, destPath, ip, port) {
   return await new Promise((res, rej) => {
     fs.readFile(sourcePath)
       .then((fContent) => {
-        // console.log(
-        //   `RpcClient [${String(threadId).padStart(2)}] try call ${ip}`
-        // )
         const ipPort = `${ip}:${port}`
         if (!clients.has(ipPort)) {
           const reqSocket = axon.socket('req')
@@ -58,7 +54,7 @@ module.exports = async function (sourcePath, destPath, ip, port) {
               })
               .catch((err) => rej(err))
           },
-          (fContent.byteLength / (100 * 2014)) * 1000 /** 100k/s */
+          (fContent.byteLength / (100 * 1024)) * 1000 /** 100k/s */
         )
       })
       .catch((err) => rej(err))

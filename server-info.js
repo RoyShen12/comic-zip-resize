@@ -2,12 +2,14 @@ module.exports = class ServerInfo {
   /**
    * @param {number} defaultPort
    * @param {{method: string, port: number}[]} methods
+   * @param {number} threadsCapacity
    */
-  constructor(defaultPort, methods) {
+  constructor(defaultPort, methods, threadsCapacity) {
     const os = require('os')
 
     this.defaultPort = defaultPort
     this.methods = methods
+    this.threadsCapacity = threadsCapacity
 
     this.cpuNum = os.cpus().length
     this.platform = os.platform()

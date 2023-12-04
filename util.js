@@ -242,6 +242,9 @@ module.exports = {
       }, 100)
     })
   },
+  /**
+   * @param {number} ms
+   */
   async sleep(ms) {
     return new Promise((res) =>
       setTimeout(() => {

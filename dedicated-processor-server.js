@@ -1,5 +1,3 @@
-const os = require('os')
-
 const rpc = require('axon-rpc')
 const axon = require('axon')
 const respSocket = axon.socket('rep')
@@ -11,9 +9,9 @@ const { DynamicPool } = require('node-worker-threads-pool')
 const {
   registryServer,
   REGISTRY_TIMEOUT,
-  isNodeLargerThan16,
   serverWorkerThread,
 } = require('./config')
+
 const registrySocket = axon.socket('req')
 const registryClient = new rpc.Client(registrySocket)
 registrySocket.connect(registryServer.port, registryServer.ip)
@@ -22,12 +20,16 @@ const { callRpc, quit, ServerInfo } = require('./util')
 
 const mainPort = 4000
 
-const thisServerInfo = new ServerInfo(mainPort, [
-  {
-    method: 'resize',
-    port: mainPort,
-  },
-])
+const thisServerInfo = new ServerInfo(
+  mainPort,
+  [
+    {
+      method: 'resize',
+      port: mainPort,
+    },
+  ],
+  serverWorkerThread()
+)
 
 callRpc(
   registryClient,
@@ -53,7 +55,7 @@ respSocket.bind(mainPort, '0.0.0.0')
 
 server.expose('alive', (fn) => fn(null, 'still'))
 
-const threadsPool = new DynamicPool(serverWorkerThread)
+const threadsPool = new DynamicPool(serverWorkerThread())
 
 let index = 0
 
