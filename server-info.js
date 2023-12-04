@@ -11,6 +11,8 @@ module.exports = class ServerInfo {
 
     this.cpuNum = os.cpus().length
     this.platform = os.platform()
+    this.arch = os.arch()
+    this.nodeVersion = process.versions.node
     this.freeMem = {
       value: os.freemem(),
       percent: os.freemem() / os.totalmem(),
