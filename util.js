@@ -126,6 +126,7 @@ module.exports = {
     isLocal,
     selectedPool
   ) {
+    return
     console.log(
       `<${String(thisIndex).padStart(
         String(fileIndex).length,

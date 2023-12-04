@@ -248,6 +248,7 @@ callRpc(
 
               zipFile.on('entry', function (entry) {
                 if (/\/$/.test(entry.fileName)) {
+                  // dir entry
                   console.log(
                     `${chalk.yellowBright('entry(dir)')}: ${chalk.gray(
                       entry.fileName
@@ -257,13 +258,9 @@ callRpc(
                   if (zipDirCount > 1) {
                     quit('error get zipDirCount > 1 in one file')
                   }
-                  // Directory file names end with '/'.
-                  // Note that entires for directories themselves are optional.
-                  // An entry's fileName implicitly requires its parent directories to exist.
                   zipFile.readEntry()
                 } else {
                   // file entry
-                  // console.log(`entry: ${chalk.gray(entry.fileName)}`)
                   const {
                     name: entryBaseName,
                     ext: entryExtName,
@@ -327,36 +324,30 @@ callRpc(
 
                             let retried = 0
                             while (cost === undefined) {
-                              // logBeforeResize(
-                              //   thisIndex,
-                              //   fileIndex,
-                              //   filePath,
-                              //   entry,
-                              //   isLocal,
-                              //   selectedPool
-                              // )
+                              logBeforeResize(
+                                thisIndex,
+                                fileIndex,
+                                filePath,
+                                entry,
+                                isLocal,
+                                selectedPool
+                              )
 
                               try {
                                 cost = await selectedPool.pool.exec({
                                   task: isLocal
-                                    ? ({ sourcePath, destPath }) => {
-                                        // ==================== Thread Scope ====================
-                                        return require('./local-resize')(
+                                    ? ({ sourcePath, destPath }) =>
+                                        require('./local-resize')(
                                           sourcePath,
                                           destPath
                                         )
-                                        // ==================== End Thread Scope ====================
-                                      }
-                                    : ({ sourcePath, destPath, ip, port }) => {
-                                        // ==================== Thread Scope ====================
-                                        return require('./rpc-resize')(
+                                    : ({ sourcePath, destPath, ip, port }) =>
+                                        require('./rpc-resize')(
                                           sourcePath,
                                           destPath,
                                           ip,
                                           port
-                                        )
-                                        // ==================== End Thread Scope ====================
-                                      },
+                                        ),
                                   param: {
                                     sourcePath: entryWritePath,
                                     destPath: resizedPath,
