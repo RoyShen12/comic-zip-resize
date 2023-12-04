@@ -148,19 +148,19 @@ callRpc(
         ['resize'],
         (err, remoteServer) => {
           if (!err && remoteServer) {
-            console.log(
-              'refresh remote server list',
-              remoteServer
-                .map(
-                  (s) =>
-                    `${chalk.greenBright(
-                      `${s.ip}:${s.port}`
-                    )}@${chalk.yellowBright(`${s.threads}C`)}`
-                )
-                .join(','),
-              'all pools',
-              getAllUsablePools().length
-            )
+            // console.log(
+            //   'refresh remote server list',
+            //   remoteServer
+            //     .map(
+            //       (s) =>
+            //         `${chalk.greenBright(
+            //           `${s.ip}:${s.port}`
+            //         )}@${chalk.yellowBright(`${s.threads}C`)}`
+            //     )
+            //     .join(','),
+            //   'all pools',
+            //   getAllUsablePools().length
+            // )
             randomDispatcher = createRandomPicker(remoteServer)
           }
         },
@@ -302,14 +302,14 @@ callRpc(
 
                         let retried = 0
                         while (cost === undefined) {
-                          // logBeforeResize(
-                          //   thisIndex,
-                          //   fileIndex,
-                          //   filePath,
-                          //   entry,
-                          //   isLocal,
-                          //   selectedPool
-                          // )
+                          logBeforeResize(
+                            thisIndex,
+                            fileIndex,
+                            filePath,
+                            entry,
+                            isLocal,
+                            selectedPool
+                          )
 
                           try {
                             cost = await selectedPool.pool.exec({
