@@ -327,14 +327,14 @@ callRpc(
 
                             let retried = 0
                             while (cost === undefined) {
-                              logBeforeResize(
-                                thisIndex,
-                                fileIndex,
-                                filePath,
-                                entry,
-                                isLocal,
-                                selectedPool
-                              )
+                              // logBeforeResize(
+                              //   thisIndex,
+                              //   fileIndex,
+                              //   filePath,
+                              //   entry,
+                              //   isLocal,
+                              //   selectedPool
+                              // )
 
                               try {
                                 cost = await selectedPool.pool.exec({
