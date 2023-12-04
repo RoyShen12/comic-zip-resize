@@ -237,13 +237,13 @@ callRpc(
               }
 
               const { entryCount } = zipFile
+              let zipDirCount = 0
               let processedEntries = 0
               let skippedEntries = 0
 
               zipFile.readEntry()
 
               zipFile.on('entry', function (entry) {
-                let zipDirCount = 0
                 if (/\/$/.test(entry.fileName)) {
                   console.log(
                     `${chalk.yellowBright('entry(dir)')}: ${chalk.gray(
