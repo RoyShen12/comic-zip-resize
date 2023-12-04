@@ -5,8 +5,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "server": "git pull && node dedicated-processor-server.js",
-    "registry": "git pull && node registry-center.js"
+    "server": "node dedicated-processor-server.js",
+    "registry": "node registry-center.js"
   },
   "author": "",
   "license": "ISC",

@@ -12,6 +12,7 @@ const {
   registryServer,
   REGISTRY_TIMEOUT,
   isNodeLargerThan16,
+  serverWorkerThread,
 } = require('./config')
 const registrySocket = axon.socket('req')
 const registryClient = new rpc.Client(registrySocket)
@@ -52,7 +53,7 @@ respSocket.bind(mainPort, '0.0.0.0')
 
 server.expose('alive', (fn) => fn(null, 'still'))
 
-const threadsPool = new DynamicPool(isNodeLargerThan16() ? 1 : os.cpus().length)
+const threadsPool = new DynamicPool(serverWorkerThread)
 
 let index = 0
 
