@@ -238,8 +238,11 @@ callRpc(
 
               const { entryCount } = zipFile
               let zipDirCount = 0
+              let trashFileCount = 0
               let processedEntries = 0
               let skippedEntries = 0
+              const getActualFileCount = () =>
+                entryCount - zipDirCount - trashFileCount
 
               zipFile.readEntry()
 
@@ -251,6 +254,9 @@ callRpc(
                     )}`
                   )
                   zipDirCount++
+                  if (zipDirCount > 1) {
+                    quit('error get zipDirCount > 1 in one file')
+                  }
                   // Directory file names end with '/'.
                   // Note that entires for directories themselves are optional.
                   // An entry's fileName implicitly requires its parent directories to exist.
@@ -263,168 +269,180 @@ callRpc(
                     ext: entryExtName,
                     base: entryName,
                   } = path.parse(entry.fileName)
-                  const entryWritePath = path.resolve(tempPath, entryName)
-                  const resizedName = `${entryBaseName}-lowQ${entryExtName}`
-                  const resizedPath = path.resolve(tempPath, resizedName)
 
-                  zipFile.openReadStream(entry, function (err, readStream) {
-                    if (err) {
-                      rej(err)
-                      return
-                    }
+                  if (entryExtName === '.db') {
+                    // just skip it
+                    trashFileCount++
+                    zipFile.readEntry()
+                  } else {
+                    const entryWritePath = path.resolve(tempPath, entryName)
+                    const resizedName = `${entryBaseName}-lowQ${entryExtName}`
+                    const resizedPath = path.resolve(tempPath, resizedName)
 
-                    const entryWriteStream = createWriteStream(entryWritePath, {
-                      highWaterMark: 1024 * 1024 * 4,
-                    })
+                    zipFile.openReadStream(entry, function (err, readStream) {
+                      if (err) {
+                        rej(err)
+                        return
+                      }
 
-                    entryWriteStream.on('finish', () => {
-                      zipFile.readEntry()
-
-                      entryWriteStream.close(async (err) => {
-                        if (err) {
-                          rej(err)
-                          return
+                      const entryWriteStream = createWriteStream(
+                        entryWritePath,
+                        {
+                          highWaterMark: 1024 * 1024 * 4,
                         }
+                      )
 
-                        const sourceSize = (await fs.stat(entryWritePath)).size
+                      entryWriteStream.on('finish', () => {
+                        zipFile.readEntry()
 
-                        if (sourceSize >= SHARP_MIN_SIZE * 1024) {
-                          let cost = undefined
-                          // thread
-                          let selectedPool = undefined
-                          while (!selectedPool || !selectedPool.pool) {
-                            selectedPool = randomDispatcher()
-                            if (!poolIsIdle(selectedPool.pool)) {
-                              selectedPool = undefined
-                              if (
-                                getAllUsablePools().length === 0 ||
-                                getAllUsablePools().every(
-                                  (pool) => !poolIsIdle(pool)
-                                )
-                              ) {
-                                await sleep(100)
-                              }
-                            }
+                        entryWriteStream.close(async (err) => {
+                          if (err) {
+                            rej(err)
+                            return
                           }
-                          let isLocal =
-                            selectedPool.mark === ResizeMachine.Local
 
-                          let retried = 0
-                          while (cost === undefined) {
-                            logBeforeResize(
-                              thisIndex,
-                              fileIndex,
-                              filePath,
-                              entry,
-                              isLocal,
-                              selectedPool
-                            )
+                          const sourceSize = (await fs.stat(entryWritePath))
+                            .size
 
-                            try {
-                              cost = await selectedPool.pool.exec({
-                                task: isLocal
-                                  ? ({ sourcePath, destPath }) => {
-                                      // ==================== Thread Scope ====================
-                                      return require('./local-resize')(
-                                        sourcePath,
-                                        destPath
-                                      )
-                                      // ==================== End Thread Scope ====================
-                                    }
-                                  : ({ sourcePath, destPath, ip, port }) => {
-                                      // ==================== Thread Scope ====================
-                                      return require('./rpc-resize')(
-                                        sourcePath,
-                                        destPath,
-                                        ip,
-                                        port
-                                      )
-                                      // ==================== End Thread Scope ====================
-                                    },
-                                param: {
-                                  sourcePath: entryWritePath,
-                                  destPath: resizedPath,
-                                  ip: selectedPool.ip,
-                                  port: selectedPool.port,
-                                },
-                              })
-                            } catch (error) {
-                              const oldSelectedPool = { ...selectedPool }
-                              const oldIsLocal = isLocal
-                              selectedPool = undefined
-                              while (!selectedPool || !selectedPool.pool) {
-                                selectedPool = randomDispatcher()
+                          if (sourceSize >= SHARP_MIN_SIZE * 1024) {
+                            let cost = undefined
+                            // thread
+                            let selectedPool = undefined
+                            while (!selectedPool || !selectedPool.pool) {
+                              selectedPool = randomDispatcher()
+                              if (!poolIsIdle(selectedPool.pool)) {
+                                selectedPool = undefined
                                 if (
-                                  selectedPool.pool === oldSelectedPool.pool ||
-                                  !poolIsIdle(selectedPool.pool)
+                                  getAllUsablePools().length === 0 ||
+                                  getAllUsablePools().every(
+                                    (pool) => !poolIsIdle(pool)
+                                  )
                                 ) {
-                                  selectedPool = undefined
-                                  if (
-                                    getAllUsablePools().length === 0 ||
-                                    getAllUsablePools().every(
-                                      (pool) => !poolIsIdle(pool)
-                                    )
-                                  ) {
-                                    await sleep(100)
-                                  }
+                                  await sleep(100)
                                 }
                               }
-                              isLocal =
-                                selectedPool.mark === ResizeMachine.Local
-                              retried++
-                              logWhileChangeServer(
+                            }
+                            let isLocal =
+                              selectedPool.mark === ResizeMachine.Local
+
+                            let retried = 0
+                            while (cost === undefined) {
+                              logBeforeResize(
                                 thisIndex,
                                 fileIndex,
                                 filePath,
                                 entry,
                                 isLocal,
-                                selectedPool,
-                                oldIsLocal,
-                                oldSelectedPool,
-                                retried,
-                                error
+                                selectedPool
                               )
+
+                              try {
+                                cost = await selectedPool.pool.exec({
+                                  task: isLocal
+                                    ? ({ sourcePath, destPath }) => {
+                                        // ==================== Thread Scope ====================
+                                        return require('./local-resize')(
+                                          sourcePath,
+                                          destPath
+                                        )
+                                        // ==================== End Thread Scope ====================
+                                      }
+                                    : ({ sourcePath, destPath, ip, port }) => {
+                                        // ==================== Thread Scope ====================
+                                        return require('./rpc-resize')(
+                                          sourcePath,
+                                          destPath,
+                                          ip,
+                                          port
+                                        )
+                                        // ==================== End Thread Scope ====================
+                                      },
+                                  param: {
+                                    sourcePath: entryWritePath,
+                                    destPath: resizedPath,
+                                    ip: selectedPool.ip,
+                                    port: selectedPool.port,
+                                  },
+                                })
+                              } catch (error) {
+                                const oldSelectedPool = { ...selectedPool }
+                                const oldIsLocal = isLocal
+                                selectedPool = undefined
+                                while (!selectedPool || !selectedPool.pool) {
+                                  selectedPool = randomDispatcher()
+                                  if (
+                                    selectedPool.pool ===
+                                      oldSelectedPool.pool ||
+                                    !poolIsIdle(selectedPool.pool)
+                                  ) {
+                                    selectedPool = undefined
+                                    if (
+                                      getAllUsablePools().length === 0 ||
+                                      getAllUsablePools().every(
+                                        (pool) => !poolIsIdle(pool)
+                                      )
+                                    ) {
+                                      await sleep(100)
+                                    }
+                                  }
+                                }
+                                isLocal =
+                                  selectedPool.mark === ResizeMachine.Local
+                                retried++
+                                logWhileChangeServer(
+                                  thisIndex,
+                                  fileIndex,
+                                  filePath,
+                                  entry,
+                                  isLocal,
+                                  selectedPool,
+                                  oldIsLocal,
+                                  oldSelectedPool,
+                                  retried,
+                                  error
+                                )
+                              }
                             }
+
+                            const processSpeed = sourceSize / cost / 1024
+
+                            processedEntries++
+
+                            logAfterResize(
+                              thisIndex,
+                              fileIndex,
+                              isLocal,
+                              selectedPool,
+                              processedEntries,
+                              getActualFileCount(),
+                              filePath,
+                              entry,
+                              cost,
+                              processSpeed
+                            )
+                          } else {
+                            // skip resize
+                            processedEntries++
+                            skippedEntries++
+                            logAfterSkipped(
+                              thisIndex,
+                              fileIndex,
+                              processedEntries,
+                              getActualFileCount(),
+                              filePath,
+                              entry
+                            )
                           }
 
-                          const processSpeed = sourceSize / cost / 1024
-
-                          processedEntries++
-
-                          logAfterResize(
-                            thisIndex,
-                            fileIndex,
-                            isLocal,
-                            selectedPool,
-                            processedEntries,
-                            entryCount - zipDirCount,
-                            filePath,
-                            entry,
-                            cost,
-                            processSpeed
-                          )
-                        } else {
-                          // skip resize
-                          processedEntries++
-                          skippedEntries++
-                          logAfterSkipped(
-                            thisIndex,
-                            fileIndex,
-                            processedEntries,
-                            entryCount - zipDirCount,
-                            filePath,
-                            entry
-                          )
-                        }
-
-                        if (processedEntries >= entryCount - zipDirCount) {
-                          res(skippedEntries === entryCount - zipDirCount)
-                        }
+                          if (processedEntries >= getActualFileCount()) {
+                            res(skippedEntries === getActualFileCount())
+                          }
+                        })
                       })
-                    })
 
-                    readStream.pipe(entryWriteStream)
-                  })
+                      readStream.pipe(entryWriteStream)
+                    })
+                  }
                 }
               })
 
