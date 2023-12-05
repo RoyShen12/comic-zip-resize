@@ -68,8 +68,8 @@ server.expose(
     try {
       index++
 
-      const transferredBuf = await threadsPool.exec({
-        task: async ({ index, imgBuffer }) => {
+      const transferredBuf = await threadsPool
+        .createExecutor(async ({ index, imgBuffer }) => {
           const { threadId } = require('worker_threads')
           const chalk = require('chalk')
 
@@ -101,12 +101,12 @@ server.expose(
           )
 
           return resultBuffer
-        },
-        param: {
+        })
+        .setTransferList([imgBuffer.data.buffer])
+        .exec({
           index,
           imgBuffer,
-        },
-      })
+        })
 
       fn(null, Buffer.from(transferredBuf))
     } catch (error) {

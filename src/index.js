@@ -191,12 +191,17 @@ callRpc(
                 .createExecutor(
                   isLocal
                     ? // @ts-ignore
-                      (sourceBuffer, destPath) => require('./src/local-resize')(sourceBuffer, destPath)
+                      ({ sourceBuffer, destPath }) => require('./src/local-resize')(sourceBuffer, destPath)
                     : // @ts-ignore
-                      (sourceBuffer, destPath, ip, port) => require('./src/rpc-resize')(sourceBuffer, destPath, ip, port)
+                      ({ sourceBuffer, destPath, ip, port }) => require('./src/rpc-resize')(sourceBuffer, destPath, ip, port)
                 )
                 .setTransferList([entryBuffer.buffer])
-                .exec(entryBuffer, resizedPath, selectedPool.ip, selectedPool.port)
+                .exec({
+                  sourceBuffer: entryBuffer,
+                  destPath: resizedPath,
+                  ip: selectedPool.ip,
+                  port: selectedPool.port,
+                })
             } catch (error) {
               const oldSelectedPool = { ...selectedPool }
               const oldIsLocal = isLocal
