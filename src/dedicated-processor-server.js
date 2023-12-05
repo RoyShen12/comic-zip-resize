@@ -91,7 +91,9 @@ server.expose(
             )
           )
 
+          const s = process.hrtime.bigint()
           const resultBuffer = await imgScaleWithRetry(buffer)
+          const cost = (Number(process.hrtime.bigint() - s) / 1e9).toFixed(2)
 
           const resultSize = resultBuffer.byteLength
           const ratio = ((resultSize / inputSize) * 100).toFixed(1) + '%'
@@ -103,7 +105,7 @@ server.expose(
                 ' '
               )}][${index}] resized finish ${(resultSize / 1e3).toFixed(
                 1
-              )} KB (${ratio})`
+              )} KB (${ratio}) cost ${cost}s`
             )
           )
 

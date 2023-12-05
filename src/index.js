@@ -177,7 +177,7 @@ callRpc(
           const resizedPath = path.resolve(tempPath, resizedName)
 
           const entryWriteStream = createWriteStream(entryWritePath, {
-            highWaterMark: 1024 * 1024 * 4,
+            highWaterMark: 1024 * 1024 * 2,
           })
           fileStream.pipe(entryWriteStream)
 
@@ -259,8 +259,6 @@ callRpc(
             }
           }
 
-          const processSpeed = sourceSize / cost / 1024
-
           processedEntries++
 
           logAfterResize(
@@ -273,7 +271,7 @@ callRpc(
             filePath,
             entry,
             cost,
-            processSpeed
+            sourceSize / cost / 1024
           )
         }
       }

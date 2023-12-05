@@ -30,33 +30,47 @@ async function* travelZipFile(filePath, options) {
   afterOpen?.(zipFile)
 
   /**
-   * @returns {Promise<[yauzl.Entry, 'dir' | 'file']>}
+   * @returns {Promise<[yauzl.Entry, 'dir' | 'file'] | undefined>}
    */
   const readEntry = () =>
     new Promise((resolve) => {
-      zipFile.once('entry', (entry) => {
-        if (/\/$/.test(entry.fileName)) {
-          resolve([entry, 'dir'])
-        } else {
-          resolve([entry, 'file'])
-        }
-      })
-      zipFile.readEntry()
+      zipFile
+        .removeAllListeners('end')
+        .once('entry', (entry) => {
+          if (/\/$/.test(entry.fileName)) {
+            resolve([entry, 'dir'])
+          } else {
+            resolve([entry, 'file'])
+          }
+        })
+        .once('end', () => {
+          resolve(undefined)
+        })
+        .readEntry()
     })
 
-  zipFile.once('end', () => {
-    console.log('zipFile on end!')
+  zipFile.once('close', () => {
     onCloseZip?.()
   })
 
   while (true) {
-    const [entry, type] = await readEntry()
+    const entryRes = await readEntry()
+    if (!entryRes) {
+      break
+    }
+    const [entry, type] = entryRes
     /**
      * @type {{type: 'dir' | 'file', entry: yauzl.Entry, fileStream?: import('stream').Readable}}
      */
     const ret = { type, entry }
     if (type === 'file') {
+      const s = process.hrtime.bigint()
       ret.fileStream = await readFileOverZip(zipFile, entry)
+      console.log(
+        `readFileOverZip cost ${(
+          Number(process.hrtime.bigint() - s) / 1e6
+        ).toFixed(1)}ms`
+      )
     }
     yield ret
   }

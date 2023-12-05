@@ -72,6 +72,13 @@ module.exports = {
     cost,
     processSpeed
   ) {
+    let speedUnit = 'K/s'
+    if (processSpeed > 1024) {
+      processSpeed = processSpeed / 1024
+      speedUnit = 'M/s'
+    }
+    const speed = `${chalk.redBright(processSpeed.toFixed(1))} ${speedUnit}`
+    const timeCost = `cost: ${chalk.yellowBright(cost.toFixed(2))} sec`
     console.log(
       `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> [${
         isLocal
@@ -84,9 +91,7 @@ module.exports = {
         ' '
       )}) ${path.basename(filePath)}/${chalk.blueBright(
         entry.fileName
-      )} cost: ${chalk.yellowBright(
-        cost.toFixed(3)
-      )} sec, speed: ${chalk.redBright(processSpeed.toFixed(1))} K/s`
+      )} ${timeCost}, speed: ${speed}`
     )
   },
   logAfterSkipped(
