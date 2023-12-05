@@ -141,13 +141,7 @@ module.exports = {
   /**
    * @param {number} ms
    */
-  async sleep(ms) {
-    return new Promise((res) =>
-      setTimeout(() => {
-        res(undefined)
-      }, ms)
-    )
-  },
+  sleep: async (ms) => new Promise((res) => setTimeout(res, ms)),
   ...constants,
   ...logHelpers,
   ...zipHelpers,

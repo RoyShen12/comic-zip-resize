@@ -98,7 +98,8 @@ async function choosePool(dispatcherGetter, oldSelectedPool) {
     if (flag) {
       selectedPool = undefined
       if (getAllUsablePools().length === 0 || getAllUsablePools().every((pool) => !poolIsIdle(pool))) {
-        await sleep(20)
+        // console.log('>'.repeat(20) + ' await thread idle')
+        await sleep(4)
       }
     }
   }

@@ -6,18 +6,11 @@ module.exports = {
     console.log(`process file: ${chalk.cyanBright(filePath)} -> ${chalk.whiteBright(tempPath)}`)
   },
   logBeforeResize(thisIndex, fileIndex, filePath, entry, isLocal, selectedPool) {
-    // console.log(
-    //   `<${String(thisIndex).padStart(
-    //     String(fileIndex).length,
-    //     ' '
-    //   )}> ${path.basename(filePath)}/${chalk.blueBright(
-    //     entry.fileName
-    //   )} dispatch to [${
-    //     isLocal
-    //       ? chalk.magentaBright('L ')
-    //       : chalk.cyanBright('R' + selectedPool.remoteIndex)
-    //   }]`
-    // )
+    console.log(
+      `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> ${path.basename(filePath)}/${chalk.blueBright(
+        entry.fileName
+      )} dispatch to [${isLocal ? chalk.magentaBright('L ') : chalk.cyanBright('R' + selectedPool.remoteIndex)}]`
+    )
   },
   logWhileChangeServer(
     thisIndex,

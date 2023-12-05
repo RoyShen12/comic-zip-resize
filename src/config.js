@@ -33,17 +33,17 @@ module.exports = {
   },
 
   localThread: isNodeLargerThan16()
-    ? os.platform() === 'win32'
-      ? 5
+    ? /**sharp */ os.platform() === 'win32'
+      ? Math.max(2, Math.round(os.cpus().length / 2) + 1)
       : os.platform() === 'darwin'
-      ? 4
-      : 2
-    : Math.max(1, os.cpus().length - 3),
+      ? Math.max(2, Math.round(os.cpus().length / 2))
+      : Math.max(2, Math.round(os.cpus().length / 2) - 1)
+    : /** jimp */ Math.max(1, os.cpus().length - 3),
   serverWorkerThread() {
     if (isNodeLargerThan16()) {
       // sharp
       if (os.cpus().length > 24) {
-        return os.platform() === 'win32' ? 6 : 4
+        return os.platform() === 'win32' ? 32 : 4
       } else if (os.cpus().length > 16) {
         return os.platform() === 'win32' ? 4 : 3
       } else if (os.cpus().length > 12) {

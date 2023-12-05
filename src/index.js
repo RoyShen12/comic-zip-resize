@@ -142,8 +142,16 @@ callRpc(
 
       const fileStart = process.hrtime.bigint()
 
+      /**
+       * @type {Promise<void>[]}
+       */
+      const allFileReady = []
+
       for await (const { type, entry, fileStream } of travelZipFile(filePath, {
         afterOpen(zipFile) {
+          if (!zipFile.entryCount) {
+            quit('error while read zipFile.entryCount', zipFile.entryCount)
+          }
           entryCount = zipFile.entryCount
         },
         onCloseZip() {
@@ -173,97 +181,101 @@ callRpc(
             throw new Error(`cannot get ${entry.fileName}'s fileStream`)
           }
 
-          const entryWritePath = path.resolve(tempPath, entryBaseName)
-          const resizedName = `${entryName}-lowQ${entryExtName}`
-          const resizedPath = path.resolve(tempPath, resizedName)
-
-          /**
-           * @type {Buffer}
-           */
-          const entryBuffer = await new Promise((res, rej) => {
-            streamToBuffer(fileStream, (err, buf) => {
-              if (err) rej(err)
-              else res(buf)
-            })
-          })
-
-          const sourceSize = entryBuffer.byteLength
-          if (sourceSize <= SHARP_MIN_SIZE * 1024) {
-            // skip resize
-            await fs.writeFile(entryWritePath, entryBuffer)
-            processedEntries++
-            skippedEntries++
-            logAfterSkipped(thisIndex, fileIndex, processedEntries, getActualFileCount(), filePath, entry)
-            continue
-          }
-
-          let cost = undefined
-          let threadId = undefined
-          // thread
-          let [selectedPool, isLocal] = await choosePool(() => randomDispatcher)
-
-          let retried = 0
-          while (cost === undefined) {
-            logBeforeResize(thisIndex, fileIndex, filePath, entry, isLocal, selectedPool)
-
-            try {
-              // eslint-disable-next-line no-extra-semi
-              ;[cost, threadId] = await selectedPool.pool
-                .createExecutor(
-                  isLocal
-                    ? // @ts-ignore
-                      ({ sourceBuffer, destPath }) => require('./src/local-resize')(sourceBuffer, destPath)
-                    : // @ts-ignore
-                      ({ sourceBuffer, destPath, ip, port }) => require('./src/rpc-resize')(sourceBuffer, destPath, ip, port)
-                )
-                .setTransferList([entryBuffer.buffer])
-                .exec({
-                  sourceBuffer: entryBuffer,
-                  destPath: resizedPath,
-                  ip: selectedPool.ip,
-                  port: selectedPool.port,
+          // 加入并行队列
+          allFileReady.push(
+            (async () => {
+              /**
+               * @type {Buffer}
+               */
+              const entryBuffer = await new Promise((res, rej) => {
+                streamToBuffer(fileStream, (err, buf) => {
+                  if (err) rej(err)
+                  else res(buf)
                 })
-            } catch (error) {
-              const oldSelectedPool = { ...selectedPool }
-              const oldIsLocal = isLocal
+              })
+              const sourceSize = entryBuffer.byteLength
+              if (sourceSize <= SHARP_MIN_SIZE * 1024) {
+                // skip resize
+                const entryWritePath = path.resolve(tempPath, entryBaseName)
+                await fs.writeFile(entryWritePath, entryBuffer)
+                processedEntries++
+                skippedEntries++
+                logAfterSkipped(thisIndex, fileIndex, processedEntries, getActualFileCount(), filePath, entry)
+              } else {
+                const resizedPath = path.resolve(tempPath, `${entryName}-lowQ${entryExtName}`)
+                let cost = undefined
+                let threadId = undefined
+                // thread
+                let [selectedPool, isLocal] = await choosePool(() => randomDispatcher)
 
-              ;[selectedPool, isLocal] = await choosePool(() => randomDispatcher, oldSelectedPool)
-              retried++
+                let retried = 0
+                while (cost === undefined) {
+                  logBeforeResize(thisIndex, fileIndex, filePath, entry, isLocal, selectedPool)
 
-              logWhileChangeServer(
-                thisIndex,
-                fileIndex,
-                filePath,
-                entry,
-                isLocal,
-                selectedPool,
-                oldIsLocal,
-                oldSelectedPool,
-                retried,
-                error
-              )
-            }
-          }
+                  try {
+                    // eslint-disable-next-line no-extra-semi
+                    ;[cost, threadId] = await selectedPool.pool
+                      .createExecutor(
+                        isLocal
+                          ? // @ts-ignore
+                            ({ sourceBuffer, destPath }) => require('./src/local-resize')(sourceBuffer, destPath)
+                          : ({ sourceBuffer, destPath, ip, port }) =>
+                              // @ts-ignore
+                              require('./src/rpc-resize')(sourceBuffer, destPath, ip, port)
+                      )
+                      .setTransferList([entryBuffer.buffer])
+                      .exec({
+                        sourceBuffer: entryBuffer,
+                        destPath: resizedPath,
+                        ip: selectedPool.ip,
+                        port: selectedPool.port,
+                      })
+                  } catch (error) {
+                    const oldSelectedPool = { ...selectedPool }
+                    const oldIsLocal = isLocal
 
-          processedEntries++
+                    ;[selectedPool, isLocal] = await choosePool(() => randomDispatcher, oldSelectedPool)
+                    retried++
 
-          logAfterResize(
-            thisIndex,
-            fileIndex,
-            isLocal,
-            selectedPool,
-            processedEntries,
-            skippedEntries,
-            fileStart,
-            getActualFileCount(),
-            filePath,
-            entry,
-            cost,
-            sourceSize / cost / 1024,
-            threadId
+                    logWhileChangeServer(
+                      thisIndex,
+                      fileIndex,
+                      filePath,
+                      entry,
+                      isLocal,
+                      selectedPool,
+                      oldIsLocal,
+                      oldSelectedPool,
+                      retried,
+                      error
+                    )
+                  }
+                }
+
+                processedEntries++
+
+                logAfterResize(
+                  thisIndex,
+                  fileIndex,
+                  isLocal,
+                  selectedPool,
+                  processedEntries,
+                  skippedEntries,
+                  fileStart,
+                  getActualFileCount(),
+                  filePath,
+                  entry,
+                  cost,
+                  sourceSize / cost / 1024,
+                  threadId
+                )
+              }
+            })()
           )
-        }
-      }
+        } // ========== end of type is 'file'
+      } // ========== end of for await loop
+
+      await Promise.all(allFileReady)
 
       if (processedEntries < getActualFileCount()) {
         throw new Error(`processedFile ${processedEntries} < actualFile ${getActualFileCount()}`)
