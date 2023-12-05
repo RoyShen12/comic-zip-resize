@@ -6,6 +6,7 @@ const { threadId } = require('worker_threads')
  * @param {string} destPath
  */
 module.exports = async function (sourceBuffer, destPath) {
+  await require('./util').sleep(2000)
   sourceBuffer = Buffer.from(sourceBuffer)
   const s = process.hrtime.bigint()
 
