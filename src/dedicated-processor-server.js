@@ -6,11 +6,7 @@ const chalk = require('chalk')
 
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const {
-  registryServer,
-  REGISTRY_TIMEOUT,
-  serverWorkerThread,
-} = require('./config')
+const { registryServer, REGISTRY_TIMEOUT, serverWorkerThread } = require('./config')
 
 const registrySocket = axon.socket('req')
 const registryClient = new rpc.Client(registrySocket)
@@ -85,12 +81,7 @@ server.expose(
           const inputSize = buffer.byteLength
           console.log(
             chalk.whiteBright(
-              `[T${String(threadId).padStart(
-                2,
-                ' '
-              )}][${index}] received resize.buf ${(inputSize / 1e3).toFixed(
-                1
-              )} KB`
+              `[T${String(threadId).padStart(2, ' ')}][${index}] received resize.buf ${(inputSize / 1e3).toFixed(1)} KB`
             )
           )
 
@@ -103,10 +94,7 @@ server.expose(
 
           console.log(
             chalk.greenBright(
-              `[T${String(threadId).padStart(
-                2,
-                ' '
-              )}][${index}] resized finish ${(resultSize / 1e3).toFixed(
+              `[T${String(threadId).padStart(2, ' ')}][${index}] resized finish ${(resultSize / 1e3).toFixed(
                 1
               )} KB (${ratio}) cost ${cost}s`
             )

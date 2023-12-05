@@ -3,8 +3,7 @@ const { DynamicPool } = require('node-worker-threads-pool')
 const { localThread: localThreadsCount } = require('./config')
 const { ResizeMachine, Solution, poolIsIdle, sleep } = require('./util')
 
-const localDynamicPool =
-  localThreadsCount > 0 ? new DynamicPool(localThreadsCount) : null
+const localDynamicPool = localThreadsCount > 0 ? new DynamicPool(localThreadsCount) : null
 /**
  * @type {Map<string, DynamicPool>}
  */
@@ -15,9 +14,7 @@ const activeRemoteDynamicPools = new Map()
 const inactiveRemoteDynamicPools = new Map()
 
 const getAllUsablePools = () =>
-  localDynamicPool
-    ? [localDynamicPool, ...activeRemoteDynamicPools.values()]
-    : [...activeRemoteDynamicPools.values()]
+  localDynamicPool ? [localDynamicPool, ...activeRemoteDynamicPools.values()] : [...activeRemoteDynamicPools.values()]
 
 /**
  * @param {{ip: string; port: number; threads: number}[]} remoteServer
@@ -30,9 +27,7 @@ const createRandomPicker = (remoteServer) => {
        * @type {DynamicPool}
        */
       // @ts-ignore
-      const pool = inactiveRemoteDynamicPools.has(ipPort)
-        ? inactiveRemoteDynamicPools.get(ipPort)
-        : new DynamicPool(srv.threads)
+      const pool = inactiveRemoteDynamicPools.has(ipPort) ? inactiveRemoteDynamicPools.get(ipPort) : new DynamicPool(srv.threads)
       inactiveRemoteDynamicPools.delete(ipPort)
       activeRemoteDynamicPools.set(ipPort, pool)
     }
@@ -108,11 +103,8 @@ async function choosePool(dispatcherGetter, oldSelectedPool) {
 
     if (flag) {
       selectedPool = undefined
-      if (
-        getAllUsablePools().length === 0 ||
-        getAllUsablePools().every((pool) => !poolIsIdle(pool))
-      ) {
-        await sleep(100)
+      if (getAllUsablePools().length === 0 || getAllUsablePools().every((pool) => !poolIsIdle(pool))) {
+        await sleep(20)
       }
     }
   }

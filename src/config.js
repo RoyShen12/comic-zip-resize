@@ -10,10 +10,7 @@ const JPEG_MAX_MEM = 1536
 
 module.exports = {
   // 临时目录
-  TMP_PATH:
-    os.platform() === 'darwin'
-      ? path.resolve(os.homedir(), 'temp/image')
-      : path.resolve(os.homedir(), 'bin/temp/image'),
+  TMP_PATH: os.platform() === 'darwin' ? path.resolve(os.homedir(), 'temp/image') : path.resolve(os.homedir(), 'bin/temp/image'),
 
   // 只处理尺寸大于此的图片
   SHARP_MIN_SIZE: 1 * 1024, // 单位 KByte
@@ -57,10 +54,8 @@ module.exports = {
     } else {
       // jimp
       const memCapacity =
-        Math.floor(
-          (os.freemem() / (JPEG_MAX_MEM * 1024 * 1024)) *
-            (os.platform() === 'darwin' ? 1.5 : 1)
-        ) - (os.platform() === 'linux' ? 1 : 0)
+        Math.floor((os.freemem() / (JPEG_MAX_MEM * 1024 * 1024)) * (os.platform() === 'darwin' ? 1.5 : 1)) -
+        (os.platform() === 'linux' ? 1 : 0)
       return Math.min(os.cpus().length - 1, memCapacity - 1)
     }
   },

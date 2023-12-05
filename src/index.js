@@ -7,6 +7,7 @@ const fs = fsModule.promises
 const archiver = require('archiver')
 const chalk = require('chalk')
 const { v4: uuidV4 } = require('uuid')
+const streamToBuffer = require('fast-stream-to-buffer')
 
 const {
   quit,
@@ -19,11 +20,7 @@ const {
   travelZipFile,
   writeFsClosed,
 } = require('./util')
-const {
-  createRandomPicker,
-  closeAllPools,
-  choosePool,
-} = require('./threads-helper')
+const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
 
 const workingDir = process.argv[2]
 
@@ -42,6 +39,7 @@ const {
   SHARP_MIN_SIZE,
   SHARP_FILE_NAME_SUFFIX,
 } = require('./config')
+const { timeProbe } = require('./debug')
 
 // request registry server for remote server information
 const configServerSocket = axon.socket('req')
@@ -89,11 +87,7 @@ callRpc(
 
         if (subStat.isDirectory()) {
           await scanDirectory(subPath)
-        } else if (
-          subStat.isFile() &&
-          !subStat.isSymbolicLink() &&
-          subFile.endsWith('.zip')
-        ) {
+        } else if (subStat.isFile() && !subStat.isSymbolicLink() && subFile.endsWith('.zip')) {
           await scanZipFile(subPath)
         }
       }
@@ -114,9 +108,7 @@ callRpc(
         fileBaseName.includes(SHARP_FILE_NAME_SUFFIX) ||
         !(await fs.readdir(filePathParsed.dir))
           .filter((fp) => fp !== fileBaseName)
-          .every(
-            (fp) => path.parse(fp).name !== path.parse(fileLowQualityPath).name
-          )
+          .every((fp) => path.parse(fp).name !== path.parse(fileLowQualityPath).name)
       )
         return
 
@@ -140,27 +132,20 @@ callRpc(
         },
         onCloseZip() {
           console.log(
-            `<${String(thisIndex).padStart(
-              String(fileIndex).length,
-              ' '
-            )}> ${path.basename(filePath)} ${chalk.greenBright('read finish')}`
+            `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> ${path.basename(filePath)} ${chalk.greenBright(
+              'read finish'
+            )}`
           )
         },
       })) {
         if (type === 'dir') {
-          console.log(
-            `${chalk.yellowBright('entry(dir)')}: ${chalk.gray(entry.fileName)}`
-          )
+          console.log(`${chalk.yellowBright('entry(dir)')}: ${chalk.gray(entry.fileName)}`)
           zipDirCount++
           if (zipDirCount > 1) {
             quit('error get zipDirCount > 1 in one file')
           }
         } else {
-          const {
-            name: entryBaseName,
-            ext: entryExtName,
-            base: entryName,
-          } = path.parse(entry.fileName)
+          const { name: entryBaseName, ext: entryExtName } = path.parse(entry.fileName)
 
           if (entryExtName === '.db') {
             // just skip it
@@ -172,30 +157,25 @@ callRpc(
             throw new Error(`cannot get ${entry.fileName}'s fileStream`)
           }
 
-          const entryWritePath = path.resolve(tempPath, entryName)
           const resizedName = `${entryBaseName}-lowQ${entryExtName}`
           const resizedPath = path.resolve(tempPath, resizedName)
 
-          const entryWriteStream = createWriteStream(entryWritePath, {
-            highWaterMark: 1024 * 1024 * 2,
+          /**
+           * @type {Buffer}
+           */
+          const entryBuffer = await new Promise((res, rej) => {
+            streamToBuffer(fileStream, (err, buf) => {
+              if (err) rej(err)
+              else res(buf)
+            })
           })
-          fileStream.pipe(entryWriteStream)
 
-          await writeFsClosed(entryWriteStream)
-
-          const sourceSize = (await fs.stat(entryWritePath)).size
+          const sourceSize = entryBuffer.byteLength
           if (sourceSize <= SHARP_MIN_SIZE * 1024) {
             // skip resize
             processedEntries++
             skippedEntries++
-            logAfterSkipped(
-              thisIndex,
-              fileIndex,
-              processedEntries,
-              getActualFileCount(),
-              filePath,
-              entry
-            )
+            logAfterSkipped(thisIndex, fileIndex, processedEntries, getActualFileCount(), filePath, entry)
             continue
           }
           let cost = undefined
@@ -204,31 +184,19 @@ callRpc(
 
           let retried = 0
           while (cost === undefined) {
-            logBeforeResize(
-              thisIndex,
-              fileIndex,
-              filePath,
-              entry,
-              isLocal,
-              selectedPool
-            )
+            logBeforeResize(thisIndex, fileIndex, filePath, entry, isLocal, selectedPool)
 
             try {
               cost = await selectedPool.pool.exec({
                 task: isLocal
-                  ? ({ sourcePath, destPath }) =>
+                  ? ({ sourceBuffer, destPath }) =>
                       // @ts-ignore
-                      require('./src/local-resize')(sourcePath, destPath)
-                  : ({ sourcePath, destPath, ip, port }) =>
+                      require('./src/local-resize')(sourceBuffer, destPath)
+                  : ({ sourceBuffer, destPath, ip, port }) =>
                       // @ts-ignore
-                      require('./src/rpc-resize')(
-                        sourcePath,
-                        destPath,
-                        ip,
-                        port
-                      ),
+                      require('./src/rpc-resize')(sourceBuffer, destPath, ip, port),
                 param: {
-                  sourcePath: entryWritePath,
+                  sourceBuffer: entryBuffer,
                   destPath: resizedPath,
                   ip: selectedPool.ip,
                   port: selectedPool.port,
@@ -238,10 +206,7 @@ callRpc(
               const oldSelectedPool = { ...selectedPool }
               const oldIsLocal = isLocal
 
-              ;[selectedPool, isLocal] = await choosePool(
-                () => randomDispatcher,
-                oldSelectedPool
-              )
+              ;[selectedPool, isLocal] = await choosePool(() => randomDispatcher, oldSelectedPool)
               retried++
 
               logWhileChangeServer(
@@ -277,25 +242,15 @@ callRpc(
       }
 
       if (processedEntries < getActualFileCount()) {
-        throw new Error(
-          `processedFile ${processedEntries} < actualFile ${getActualFileCount()}`
-        )
+        throw new Error(`processedFile ${processedEntries} < actualFile ${getActualFileCount()}`)
       }
 
       const hasNoChange = skippedEntries === getActualFileCount()
 
-      console.log(
-        chalk.greenBright(
-          `${path.basename(filePath)} unzip and resize finished`
-        )
-      )
+      console.log(chalk.greenBright(`${path.basename(filePath)} unzip and resize finished`))
 
       if (hasNoChange) {
-        console.log(
-          chalk.yellowBright(
-            `${path.basename(filePath)} no change and skip zipping`
-          )
-        )
+        console.log(chalk.yellowBright(`${path.basename(filePath)} no change and skip zipping`))
       } else {
         // promise of zip resized files
         await new Promise((zipRes, zipRej) => {
@@ -308,9 +263,7 @@ callRpc(
 
           output.on('close', function () {
             console.log(
-              `${chalk.greenBright(
-                path.basename(filePath)
-              )} zip size: ${chalk.blueBright(
+              `${chalk.greenBright(path.basename(filePath))} zip size: ${chalk.blueBright(
                 `${(archive.pointer() / 1e6).toFixed(1)} MB`
               )}`
             )
@@ -332,11 +285,7 @@ callRpc(
 
           archive.pipe(output)
 
-          console.log(
-            `${chalk.cyanBright(path.basename(filePath))} ${chalk.greenBright(
-              'start zipping'
-            )}`
-          )
+          console.log(`${chalk.cyanBright(path.basename(filePath))} ${chalk.greenBright('start zipping')}`)
 
           archive.directory(tempPath, false)
 
@@ -351,11 +300,7 @@ callRpc(
         closeAllPools()
         return fs.readdir(TMP_PATH)
       })
-      .then((fileNodes) =>
-        fileNodes.map((fp) =>
-          fs.rm(path.resolve(TMP_PATH, fp), { recursive: true, force: true })
-        )
-      )
+      .then((fileNodes) => fileNodes.map((fp) => fs.rm(path.resolve(TMP_PATH, fp), { recursive: true, force: true })))
       .then(() => {
         configServerSocket.close()
         process.exit(0)

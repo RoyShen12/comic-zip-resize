@@ -75,11 +75,12 @@ server.expose(
         })
 
         console.log(
-          `server ${ip}:${defaultPort} [${info.platform}(${info.arch})] (CPU:${
-            info.cpuNum
-          }, freeMem:${(info.freeMem.value / 1024 / 1024 / 1024).toFixed(
-            1
-          )}GB) nodeV${info.nodeVersion} registered`
+          `server ${ip}:${defaultPort} [${info.platform}(${info.arch})] (CPU:${info.cpuNum}, freeMem:${(
+            info.freeMem.value /
+            1024 /
+            1024 /
+            1024
+          ).toFixed(1)}GB) nodeV${info.nodeVersion} registered`
         )
         statusMap.set(ip, true)
         fn(null, 'ok')

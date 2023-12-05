@@ -64,13 +64,7 @@ async function* travelZipFile(filePath, options) {
      */
     const ret = { type, entry }
     if (type === 'file') {
-      const s = process.hrtime.bigint()
       ret.fileStream = await readFileOverZip(zipFile, entry)
-      console.log(
-        `readFileOverZip cost ${(
-          Number(process.hrtime.bigint() - s) / 1e6
-        ).toFixed(1)}ms`
-      )
     }
     yield ret
   }

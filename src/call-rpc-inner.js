@@ -15,13 +15,7 @@ const alreadyTimeout = new Set()
  */
 function callRpcInner(callId, client, name, args, callback, timeout) {
   if (process.env.RPC_LOG)
-    console.log(
-      `callRpcInner invoked, callId=${callId}, name=${name}, args=${JSON.stringify(
-        args,
-        null,
-        2
-      )}, timeout=${timeout}`
-    )
+    console.log(`callRpcInner invoked, callId=${callId}, name=${name}, args=${JSON.stringify(args, null, 2)}, timeout=${timeout}`)
 
   if (!timeoutCountdown.has(callId)) {
     timeoutCountdown.set(
@@ -41,8 +35,7 @@ function callRpcInner(callId, client, name, args, callback, timeout) {
   client.call(name, ...args, (err, ...results) => {
     if (alreadyTimeout.has(callId)) return
 
-    if (process.env.RPC_LOG)
-      console.log(`callRpcInner server response: `, err, results)
+    if (process.env.RPC_LOG) console.log(`callRpcInner server response: `, err, results)
     clearTimeout(timeoutCountdown.get(callId))
 
     if (err) {

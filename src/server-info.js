@@ -20,10 +20,7 @@ module.exports = class ServerInfo {
       percent: os.freemem() / os.totalmem(),
     }
     this.network = Object.entries(os.networkInterfaces())
-      .map((n) => [
-        n[0],
-        n?.[1]?.filter((ni) => !ni.internal && ni.family === 'IPv4'),
-      ])
+      .map((n) => [n[0], n?.[1]?.filter((ni) => !ni.internal && ni.family === 'IPv4')])
       .filter((n) => n[1] && n[1].length > 0)?.[0]?.[1]?.[0]
   }
 }

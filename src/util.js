@@ -1,21 +1,14 @@
 const chalk = require('chalk')
 const { v4: uuidV4 } = require('uuid')
 
-const {
-  SHARP_RATIO,
-  MAX_RETRY,
-  JPEG_MAX_MEM,
-  RPC_TIMEOUT,
-  isNodeLargerThan16,
-} = require('./config')
+const { SHARP_RATIO, MAX_RETRY, JPEG_MAX_MEM, RPC_TIMEOUT, isNodeLargerThan16 } = require('./config')
 
 const Jimp = require('jimp')
 const JPEG = require('jpeg-js')
 let sharp
 if (!isNodeLargerThan16()) {
   // expand jpeg memory
-  Jimp.decoders['image/jpeg'] = (data) =>
-    JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
+  Jimp.decoders['image/jpeg'] = (data) => JPEG.decode(data, { maxMemoryUsageInMB: JPEG_MAX_MEM })
 } else {
   sharp = require('sharp')
 }
@@ -78,9 +71,7 @@ module.exports = {
               quality: 80,
             })
           // @ts-ignore
-          return writeDestPath
-            ? await resizedSharpInst.toFile(writeDestPath)
-            : await resizedSharpInst.toBuffer()
+          return writeDestPath ? await resizedSharpInst.toFile(writeDestPath) : await resizedSharpInst.toBuffer()
         } catch (error) {
           console.error(error)
           retries++
@@ -98,14 +89,8 @@ module.exports = {
         try {
           // @ts-ignore
           return writeDestPath
-            ? await jimpInst
-                .scale(SHARP_RATIO)
-                .quality(80)
-                .writeAsync(writeDestPath)
-            : await jimpInst
-                .scale(SHARP_RATIO)
-                .quality(80)
-                .getBufferAsync(Jimp.MIME_JPEG)
+            ? await jimpInst.scale(SHARP_RATIO).quality(80).writeAsync(writeDestPath)
+            : await jimpInst.scale(SHARP_RATIO).quality(80).getBufferAsync(Jimp.MIME_JPEG)
         } catch (error) {
           console.error(error)
           retries++
@@ -117,12 +102,7 @@ module.exports = {
     }
   },
   workerUtilization(pool) {
-    return pool.workers.map(
-      (w) =>
-        `${(w.performance.eventLoopUtilization().utilization * 100).toFixed(
-          2
-        )}%`
-    )
+    return pool.workers.map((w) => `${(w.performance.eventLoopUtilization().utilization * 100).toFixed(2)}%`)
   },
   poolIsIdle(pool) {
     return pool && pool.workers && pool.workers.some((w) => w.ready)
