@@ -24,9 +24,7 @@ function callRpcInner(callId, client, name, args, callback, timeout) {
         alreadyTimeout.add(callId)
         Retries[callId] = 0
         callback(
-          new Error(
-            `Timeout error to call remote server, call id ${callId}, timeout ${timeout}ms, server ${client?.sock?.server}`
-          )
+          new Error(`Timeout error to call remote server, call id ${callId}, timeout ${timeout}ms, server ${client?.sock?.server}`)
         )
       }, timeout)
     )

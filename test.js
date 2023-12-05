@@ -13,14 +13,11 @@ const p = path.resolve(h, 'Downloads/test2_unzip')
     })
   await fs.promises.mkdir(p)
 
-  for await (const data of require('./src/zip-helper').travelZipFile(
-    path.resolve(h, 'Downloads/test.zip'),
-    {
-      onCloseZip() {
-        console.log('onCloseZip')
-      },
-    }
-  )) {
+  for await (const data of require('./src/zip-helper').travelZipFile(path.resolve(h, 'Downloads/test.zip'), {
+    onCloseZip() {
+      console.log('onCloseZip')
+    },
+  })) {
     console.log('for await get data', data.type, data.entry.fileName)
     await new Promise((res) => setTimeout(res, Math.random() * 100))
     if (data.type === 'file') {

@@ -7,7 +7,6 @@ const fs = fsModule.promises
 const archiver = require('archiver')
 const chalk = require('chalk')
 const { v4: uuidV4 } = require('uuid')
-const streamToBuffer = require('fast-stream-to-buffer')
 
 const {
   quit,
@@ -18,6 +17,7 @@ const {
   logAfterSkipped,
   logStartFileProcess,
   travelZipFile,
+  readStreamToBuffer,
 } = require('./util')
 const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
 
@@ -82,12 +82,18 @@ callRpc(
 
       for (const subFile of subFiles) {
         const subPath = path.resolve(pathParam, subFile)
+
         const subStat = await fs.stat(subPath)
 
         if (subStat.isDirectory()) {
           await scanDirectory(subPath)
         } else if (subStat.isFile() && !subStat.isSymbolicLink() && subFile.endsWith('.zip')) {
-          await scanZipFile(subPath)
+          try {
+            await scanZipFile(subPath)
+          } catch (error) {
+            console.log(`error on file ${subPath}`)
+            console.log(error)
+          }
         }
       }
 
@@ -95,7 +101,7 @@ callRpc(
     }
 
     /**
-     * make 0.5x zip with $SHARP_FILE_NAME_SUFFIX file name
+     * make SHARP_RATIO x zip with $SHARP_FILE_NAME_SUFFIX file name
      * @param {string} filePath
      */
     async function scanZipFile(filePath) {
@@ -150,7 +156,7 @@ callRpc(
       for await (const { type, entry, fileStream } of travelZipFile(filePath, {
         afterOpen(zipFile) {
           if (!zipFile.entryCount) {
-            quit('error while read zipFile.entryCount', zipFile.entryCount)
+            throw new Error(`error while read zipFile.entryCount ${zipFile.entryCount}`)
           }
           entryCount = zipFile.entryCount
         },
@@ -166,7 +172,7 @@ callRpc(
           console.log(`${chalk.yellowBright('entry(dir)')}: ${chalk.gray(entry.fileName)}`)
           zipDirCount++
           if (zipDirCount > 1) {
-            quit('error get zipDirCount > 1 in one file')
+            throw new Error('error get zipDirCount > 1 in one file')
           }
         } else {
           const { name: entryName, ext: entryExtName, base: entryBaseName } = path.parse(entry.fileName)
@@ -187,17 +193,11 @@ callRpc(
               /**
                * @type {Buffer}
                */
-              const entryBuffer = await new Promise((res, rej) => {
-                streamToBuffer(fileStream, (err, buf) => {
-                  if (err) rej(err)
-                  else res(buf)
-                })
-              })
+              const entryBuffer = await readStreamToBuffer(fileStream)
               const sourceSize = entryBuffer.byteLength
               if (sourceSize <= SHARP_MIN_SIZE * 1024) {
                 // skip resize
-                const entryWritePath = path.resolve(tempPath, entryBaseName)
-                await fs.writeFile(entryWritePath, entryBuffer)
+                await fs.writeFile(path.resolve(tempPath, entryBaseName), entryBuffer)
                 processedEntries++
                 skippedEntries++
                 logAfterSkipped(thisIndex, fileIndex, processedEntries, getActualFileCount(), filePath, entry)
@@ -231,12 +231,11 @@ callRpc(
                         port: selectedPool.port,
                       })
                   } catch (error) {
-                    const oldSelectedPool = { ...selectedPool }
+                    retried++
+                    const oldPool = { ...selectedPool }
                     const oldIsLocal = isLocal
 
-                    ;[selectedPool, isLocal] = await choosePool(() => randomDispatcher, oldSelectedPool)
-                    retried++
-
+                    ;[selectedPool, isLocal] = await choosePool(() => randomDispatcher, oldPool)
                     logWhileChangeServer(
                       thisIndex,
                       fileIndex,
@@ -245,7 +244,7 @@ callRpc(
                       isLocal,
                       selectedPool,
                       oldIsLocal,
-                      oldSelectedPool,
+                      oldPool,
                       retried,
                       error
                     )
@@ -299,9 +298,7 @@ callRpc(
 
           output.on('close', function () {
             console.log(
-              `${chalk.greenBright(path.basename(filePath))} zip size: ${chalk.blueBright(
-                `${(archive.pointer() / 1e6).toFixed(1)} MB`
-              )}`
+              `${chalk.greenBright(path.basename(filePath))} zip size: ${chalk.blueBright(`${(archive.pointer() / 1e6).toFixed(1)} MB`)}`
             )
             zipRes(undefined)
           })

@@ -69,9 +69,7 @@ server.expose(
 
         methods.forEach((method) => {
           const ipPort = `${ip}:${method.port}`
-          methodMap.has(method.method)
-            ? methodMap.get(method.method)?.add(ipPort)
-            : methodMap.set(method.method, new Set([ipPort]))
+          methodMap.has(method.method) ? methodMap.get(method.method)?.add(ipPort) : methodMap.set(method.method, new Set([ipPort]))
         })
 
         console.log(

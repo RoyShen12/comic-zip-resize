@@ -81,9 +81,7 @@ server.expose(
 
           const inputSize = buffer.byteLength
           console.log(
-            chalk.whiteBright(
-              `[T${String(threadId).padStart(2, ' ')}][${index}] received resize.buf ${(inputSize / 1e3).toFixed(1)} KB`
-            )
+            chalk.whiteBright(`[T${String(threadId).padStart(2, ' ')}][${index}] received resize.buf ${(inputSize / 1e3).toFixed(1)} KB`)
           )
 
           const s = process.hrtime.bigint()

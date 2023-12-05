@@ -18,6 +18,7 @@ const callRpcInner = require('./call-rpc-inner')
 const constants = require('./constants')
 const logHelpers = require('./log-helper')
 const zipHelpers = require('./zip-helper')
+const streamToBuffer = require('fast-stream-to-buffer')
 
 async function jimpReadImage(source, maxRetries = MAX_RETRY) {
   let retries = 0
@@ -119,6 +120,18 @@ module.exports = {
           resolve(Number(process.hrtime.bigint() - waitStart) / 1e9)
         }
       }, 100)
+    })
+  },
+  /**
+   * @param {import('stream').Readable} fileStream
+   * @returns {Promise<Buffer>}
+   */
+  async readStreamToBuffer(fileStream) {
+    return new Promise((res, rej) => {
+      streamToBuffer(fileStream, (err, buf) => {
+        if (err) rej(err)
+        else res(buf)
+      })
     })
   },
   /**

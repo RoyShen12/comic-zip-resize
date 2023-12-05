@@ -36,8 +36,8 @@ module.exports = {
     ? /**sharp */ os.platform() === 'win32'
       ? Math.max(2, Math.round(os.cpus().length / 2) + 1)
       : os.platform() === 'darwin'
-      ? Math.max(2, Math.round(os.cpus().length / 2))
-      : Math.max(2, Math.round(os.cpus().length / 2) - 1)
+        ? Math.max(2, Math.round(os.cpus().length / 2))
+        : Math.max(2, Math.round(os.cpus().length / 2) - 1)
     : /** jimp */ Math.max(1, os.cpus().length - 3),
   serverWorkerThread() {
     if (isNodeLargerThan16()) {
