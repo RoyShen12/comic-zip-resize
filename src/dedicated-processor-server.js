@@ -67,16 +67,15 @@ server.expose(
   async (imgBuffer, fn) => {
     try {
       index++
+      const buffer = Buffer.from(imgBuffer.data)
 
       const transferredBuf = await threadsPool
-        .createExecutor(async ({ index, imgBuffer }) => {
+        .createExecutor(async ({ index, buffer }) => {
           const { threadId } = require('worker_threads')
           const chalk = require('chalk')
 
           // @ts-ignore
           const { imgScaleWithRetry } = require('./src/util')
-
-          const buffer = Buffer.from(imgBuffer.data)
 
           const inputSize = buffer.byteLength
           console.log(
@@ -102,10 +101,10 @@ server.expose(
 
           return resultBuffer
         })
-        .setTransferList([imgBuffer.data.buffer])
+        .setTransferList([buffer.buffer])
         .exec({
           index,
-          imgBuffer,
+          buffer,
         })
 
       fn(null, Buffer.from(transferredBuf))
