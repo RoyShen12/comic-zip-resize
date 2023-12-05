@@ -10,16 +10,10 @@ const openZipOpts = {
 
 /**
  * @param {string} filePath
- * @param {(zip: yauzl.ZipFile) => void} [afterOpen]
- * @param {() => void} [onCloseZip]
+ * @param {{afterOpen?: (zip: yauzl.ZipFile) => void, onCloseZip?: () => void}} [options]
  */
-async function* travelZipFile(filePath, afterOpen, onCloseZip) {
-  let resolve
-
-  let entryPromise = new Promise((res) => {
-    resolve = res
-  })
-
+async function* travelZipFile(filePath, options) {
+  const { afterOpen, onCloseZip } = options || {}
   /**
    * @type {yauzl.ZipFile}
    */
@@ -27,65 +21,44 @@ async function* travelZipFile(filePath, afterOpen, onCloseZip) {
     yauzl.open(filePath, openZipOpts, (err, zipFile) => {
       if (err) {
         rej(err)
-        return
+      } else {
+        res(zipFile)
       }
-      res(zipFile)
     })
   })
 
   afterOpen?.(zipFile)
 
-  zipFile.on('entry', async (entry) => {
-    if (/\/$/.test(entry.fileName)) {
-      resolve({ type: 'dir', entry })
-
-      resolve = null
-      setImmediate(() => {
-        entryPromise = new Promise((res) => {
-          resolve = res
-        })
-        console.log('dir setImmediate resolve', resolve)
+  /**
+   * @returns {Promise<[yauzl.Entry, 'dir' | 'file']>}
+   */
+  const readEntry = () =>
+    new Promise((resolve) => {
+      zipFile.once('entry', (entry) => {
+        if (/\/$/.test(entry.fileName)) {
+          resolve([entry, 'dir'])
+        } else {
+          resolve([entry, 'file'])
+        }
       })
-    } else {
-      const fileStream = await readFileOverZip(zipFile, entry)
-      resolve({ type: 'file', entry, fileStream })
+      zipFile.readEntry()
+    })
 
-      resolve = null
-      setImmediate(() => {
-        entryPromise = new Promise((res) => {
-          resolve = res
-        })
-        console.log('file setImmediate resolve', resolve)
-      })
-    }
-  })
-  zipFile.on('close', () => {
-    console.log('zipFile on close!')
-    if (resolve) {
-      resolve()
-    }
+  zipFile.once('end', () => {
+    console.log('zipFile on end!')
     onCloseZip?.()
   })
 
-  zipFile.readEntry()
-
   while (true) {
-    console.log('while (true) entered')
-    const result = await entryPromise
-    console.log('while (true) typeof result', typeof result)
-    if (!result) {
-      break
+    const [entry, type] = await readEntry()
+    /**
+     * @type {{type: 'dir' | 'file', entry: yauzl.Entry, fileStream?: import('stream').Readable}}
+     */
+    const ret = { type, entry }
+    if (type === 'file') {
+      ret.fileStream = await readFileOverZip(zipFile, entry)
     }
-
-    console.log('resolve', resolve)
-    // only read the next entry if the previous entry is processed
-    if (resolve === null) {
-      console.log('call zipFile.readEntry')
-      zipFile.readEntry()
-    }
-
-    yield result
-    console.log('yield entered')
+    yield ret
   }
 }
 
