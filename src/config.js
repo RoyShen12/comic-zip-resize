@@ -42,15 +42,7 @@ module.exports = {
   serverWorkerThread() {
     if (isNodeLargerThan16()) {
       // sharp
-      if (os.cpus().length > 24) {
-        return os.platform() === 'win32' ? 32 : 4
-      } else if (os.cpus().length > 16) {
-        return os.platform() === 'win32' ? 4 : 3
-      } else if (os.cpus().length > 12) {
-        return os.platform() === 'win32' ? 3 : 2
-      } else {
-        return os.platform() === 'win32' ? 2 : 1
-      }
+      return Math.max(2, Math.round(os.cpus().length / 2) + 1)
     } else {
       // jimp
       const memCapacity =
