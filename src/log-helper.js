@@ -42,7 +42,21 @@ module.exports = {
       }] (retried ${chalk.redBright(retried)})`
     )
   },
-  logAfterResize(thisIndex, fileIndex, isLocal, selectedPool, processedEntry, entryCount, filePath, entry, cost, processSpeed) {
+  logAfterResize(
+    thisIndex,
+    fileIndex,
+    isLocal,
+    selectedPool,
+    processedEntry,
+    skippedEntries,
+    fileStart,
+    entryCount,
+    filePath,
+    entry,
+    cost,
+    processSpeed,
+    threadId
+  ) {
     let speedUnit = 'K/s'
     if (processSpeed > 1024) {
       processSpeed = processSpeed / 1024
@@ -50,13 +64,16 @@ module.exports = {
     }
     const speed = `${chalk.redBright(processSpeed.toFixed(1))} ${speedUnit}`
     const timeCost = `cost: ${chalk.yellowBright(cost.toFixed(2))} sec`
+    const fileSpeed = `${((processedEntry - skippedEntries) / (Number(process.hrtime.bigint() - fileStart) / 1e9)).toFixed(1)}/s`
     console.log(
-      `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> [${
+      `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> (${fileSpeed}) [${
         isLocal ? chalk.magentaBright('L ') : chalk.cyanBright('R' + selectedPool.remoteIndex)
-      }] ${chalk.greenBright('resizing file')} (${String(processedEntry).padStart(3, ' ')}/${String(entryCount).padStart(
+      }][${chalk.magentaBright(threadId)}] ${chalk.greenBright('resizing file')} (${String(processedEntry).padStart(
         3,
         ' '
-      )}) ${path.basename(filePath)}/${chalk.blueBright(entry.fileName)} ${timeCost}, speed: ${speed}`
+      )}/${String(entryCount).padStart(3, ' ')}) ${path.basename(filePath)}/${chalk.blueBright(
+        entry.fileName
+      )} ${timeCost}, speed: ${speed}`
     )
   },
   logAfterSkipped(thisIndex, fileIndex, processedEntry, entryCount, filePath, entry) {

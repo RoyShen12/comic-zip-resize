@@ -1,4 +1,5 @@
 const { imgScaleWithRetry } = require('./util')
+const { threadId } = require('worker_threads')
 
 /**
  * @param {Buffer} sourceBuffer
@@ -11,5 +12,5 @@ module.exports = async function (sourceBuffer, destPath) {
   await imgScaleWithRetry(sourceBuffer, destPath)
 
   const cost = Number(process.hrtime.bigint() - s) / 1e9
-  return cost
+  return [cost, threadId]
 }

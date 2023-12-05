@@ -7,14 +7,14 @@ const localDynamicPool = localThreadsCount > 0 ? new DynamicPool(localThreadsCou
 /**
  * @type {Map<string, DynamicPool>}
  */
-const activeRemoteDynamicPools = new Map()
+const activeRemotePoolMap = new Map()
 /**
  * @type {Map<string, DynamicPool>}
  */
-const inactiveRemoteDynamicPools = new Map()
+const inactiveRemotePoolMap = new Map()
 
 const getAllUsablePools = () =>
-  localDynamicPool ? [localDynamicPool, ...activeRemoteDynamicPools.values()] : [...activeRemoteDynamicPools.values()]
+  localDynamicPool ? [localDynamicPool, ...activeRemotePoolMap.values()] : [...activeRemotePoolMap.values()]
 
 /**
  * @param {{ip: string; port: number; threads: number}[]} remoteServer
@@ -22,32 +22,32 @@ const getAllUsablePools = () =>
 const createRandomPicker = (remoteServer) => {
   remoteServer.forEach((srv) => {
     const ipPort = `${srv.ip}:${srv.port}`
-    if (!activeRemoteDynamicPools.has(ipPort)) {
+    if (!activeRemotePoolMap.has(ipPort)) {
       /**
        * @type {DynamicPool}
        */
       // @ts-ignore
-      const pool = inactiveRemoteDynamicPools.has(ipPort) ? inactiveRemoteDynamicPools.get(ipPort) : new DynamicPool(srv.threads)
-      inactiveRemoteDynamicPools.delete(ipPort)
-      activeRemoteDynamicPools.set(ipPort, pool)
+      const pool = inactiveRemotePoolMap.has(ipPort) ? inactiveRemotePoolMap.get(ipPort) : new DynamicPool(srv.threads)
+      inactiveRemotePoolMap.delete(ipPort)
+      activeRemotePoolMap.set(ipPort, pool)
     }
   })
 
-  activeRemoteDynamicPools.forEach((pool, ipPort) => {
+  activeRemotePoolMap.forEach((pool, ipPort) => {
     if (
       remoteServer.findIndex((srv) => {
         const remoteIpPort = `${srv.ip}:${srv.port}`
         return remoteIpPort === ipPort
       }) === -1
     ) {
-      inactiveRemoteDynamicPools.set(ipPort, pool)
-      activeRemoteDynamicPools.delete(ipPort)
+      inactiveRemotePoolMap.set(ipPort, pool)
+      activeRemotePoolMap.delete(ipPort)
     }
   })
 
   const threadWeight = [
     localThreadsCount,
-    ...Array.from(activeRemoteDynamicPools.keys()).map((ipPort) => {
+    ...Array.from(activeRemotePoolMap.keys()).map((ipPort) => {
       const ip = ipPort.split(':')[0]
       return remoteServer.find((srv) => srv.ip === ip)?.threads
     }),
@@ -65,7 +65,7 @@ const createRandomPicker = (remoteServer) => {
     } else {
       const remoteIndex = index - 1
       return {
-        pool: Array.from(activeRemoteDynamicPools.values())[remoteIndex],
+        pool: Array.from(activeRemotePoolMap.values())[remoteIndex],
         mark: ResizeMachine.Remote,
         remoteIndex,
         ip: remoteServer[remoteIndex].ip,
@@ -73,12 +73,6 @@ const createRandomPicker = (remoteServer) => {
       }
     }
   }
-}
-
-function closeAllPools() {
-  localDynamicPool?.destroy()
-  activeRemoteDynamicPools.forEach((p) => p.destroy())
-  inactiveRemoteDynamicPools.forEach((p) => p.destroy())
 }
 
 /**
@@ -111,6 +105,12 @@ async function choosePool(dispatcherGetter, oldSelectedPool) {
 
   // @ts-ignore
   return [selectedPool, selectedPool.mark === ResizeMachine.Local]
+}
+
+function closeAllPools() {
+  localDynamicPool?.destroy()
+  activeRemotePoolMap.forEach((p) => p.destroy())
+  inactiveRemotePoolMap.forEach((p) => p.destroy())
 }
 
 module.exports = {

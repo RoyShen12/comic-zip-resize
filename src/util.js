@@ -104,6 +104,9 @@ module.exports = {
   workerUtilization(pool) {
     return pool.workers.map((w) => `${(w.performance.eventLoopUtilization().utilization * 100).toFixed(2)}%`)
   },
+  /**
+   * @param {import('node-worker-threads-pool').DynamicPool | null} [pool]
+   */
   poolIsIdle(pool) {
     return pool && pool.workers && pool.workers.some((w) => w.ready)
   },

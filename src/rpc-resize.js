@@ -1,4 +1,5 @@
 const { promises: fs } = require('fs')
+const { threadId } = require('worker_threads')
 
 const rpc = require('axon-rpc')
 const axon = require('axon')
@@ -38,7 +39,7 @@ module.exports = async function (sourceBuffer, destPath, ip, port) {
         fs.writeFile(destPath, Buffer.from(ret.data))
           .then(() => {
             const cost = Number(process.hrtime.bigint() - s) / 1e9
-            res(cost)
+            res([cost, threadId])
           })
           .catch((err) => rej(err))
       },

@@ -18,7 +18,6 @@ const {
   logAfterSkipped,
   logStartFileProcess,
   travelZipFile,
-  writeFsClosed,
 } = require('./util')
 const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
 
@@ -119,12 +118,29 @@ callRpc(
       await fs.mkdir(tempPath, { recursive: true })
       logStartFileProcess(filePath, tempPath)
 
+      /**
+       * zip 文件总的 item 数，包含目录和文件
+       */
       let entryCount
+      /**
+       * 目录数
+       */
       let zipDirCount = 0
+      /**
+       * 垃圾文件数
+       */
       let trashFileCount = 0
+      /**
+       * 已处理的文件数，包含跳过的小尺寸图
+       */
       let processedEntries = 0
+      /**
+       * 已跳过的小尺寸图
+       */
       let skippedEntries = 0
       const getActualFileCount = () => entryCount - zipDirCount - trashFileCount
+
+      const fileStart = process.hrtime.bigint()
 
       for await (const { type, entry, fileStream } of travelZipFile(filePath, {
         afterOpen(zipFile) {
@@ -145,9 +161,9 @@ callRpc(
             quit('error get zipDirCount > 1 in one file')
           }
         } else {
-          const { name: entryBaseName, ext: entryExtName } = path.parse(entry.fileName)
+          const { name: entryName, ext: entryExtName, base: entryBaseName } = path.parse(entry.fileName)
 
-          if (entryExtName === '.db') {
+          if (entryExtName === '.db' || entryName.startsWith('.')) {
             // just skip it
             trashFileCount++
             continue
@@ -157,7 +173,8 @@ callRpc(
             throw new Error(`cannot get ${entry.fileName}'s fileStream`)
           }
 
-          const resizedName = `${entryBaseName}-lowQ${entryExtName}`
+          const entryWritePath = path.resolve(tempPath, entryBaseName)
+          const resizedName = `${entryName}-lowQ${entryExtName}`
           const resizedPath = path.resolve(tempPath, resizedName)
 
           /**
@@ -173,12 +190,15 @@ callRpc(
           const sourceSize = entryBuffer.byteLength
           if (sourceSize <= SHARP_MIN_SIZE * 1024) {
             // skip resize
+            await fs.writeFile(entryWritePath, entryBuffer)
             processedEntries++
             skippedEntries++
             logAfterSkipped(thisIndex, fileIndex, processedEntries, getActualFileCount(), filePath, entry)
             continue
           }
+
           let cost = undefined
+          let threadId = undefined
           // thread
           let [selectedPool, isLocal] = await choosePool(() => randomDispatcher)
 
@@ -187,7 +207,8 @@ callRpc(
             logBeforeResize(thisIndex, fileIndex, filePath, entry, isLocal, selectedPool)
 
             try {
-              cost = await selectedPool.pool
+              // eslint-disable-next-line no-extra-semi
+              ;[cost, threadId] = await selectedPool.pool
                 .createExecutor(
                   isLocal
                     ? // @ts-ignore
@@ -232,11 +253,14 @@ callRpc(
             isLocal,
             selectedPool,
             processedEntries,
+            skippedEntries,
+            fileStart,
             getActualFileCount(),
             filePath,
             entry,
             cost,
-            sourceSize / cost / 1024
+            sourceSize / cost / 1024,
+            threadId
           )
         }
       }
@@ -300,7 +324,9 @@ callRpc(
         closeAllPools()
         return fs.readdir(TMP_PATH)
       })
-      .then((fileNodes) => fileNodes.map((fp) => fs.rm(path.resolve(TMP_PATH, fp), { recursive: true, force: true })))
+      .then((fileNodes) => {
+        return Promise.all(fileNodes.map((fp) => fs.rm(path.resolve(TMP_PATH, fp), { recursive: true, force: true })))
+      })
       .then(() => {
         configServerSocket.close()
         process.exit(0)
