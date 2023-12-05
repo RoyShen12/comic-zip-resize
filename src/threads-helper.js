@@ -102,7 +102,7 @@ async function choosePool(dispatcherGetter, oldSelectedPool) {
     selectedPool = dispatcher()
 
     let flag = !poolIsIdle(selectedPool?.pool)
-    if (oldSelectedPool) {
+    if (oldSelectedPool && getAllUsablePools().length > 1) {
       flag = flag || selectedPool.pool === oldSelectedPool.pool
     }
 
@@ -116,6 +116,7 @@ async function choosePool(dispatcherGetter, oldSelectedPool) {
       }
     }
   }
+
   // @ts-ignore
   return [selectedPool, selectedPool.mark === ResizeMachine.Local]
 }

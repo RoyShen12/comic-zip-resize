@@ -101,7 +101,7 @@ server.expose(
     const result = methodMap.get(method)
     // console.log('result', result, 'statusMap', statusMap)
     if (!result) {
-      fn(new Error(`no such method`))
+      fn(null, [])
     } else {
       fn(
         null,

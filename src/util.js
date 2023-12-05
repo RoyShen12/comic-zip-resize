@@ -25,7 +25,6 @@ const callRpcInner = require('./call-rpc-inner')
 const constants = require('./constants')
 const logHelpers = require('./log-helper')
 const zipHelpers = require('./zip-helper')
-const threadsHelpers = require('./threads-helper')
 
 async function jimpReadImage(source, maxRetries = MAX_RETRY) {
   let retries = 0
@@ -140,6 +139,23 @@ module.exports = {
     })
   },
   /**
+   * @param {import('fs').WriteStream} wfs
+   * @returns {Promise<void>}
+   */
+  async writeFsClosed(wfs) {
+    return new Promise((res, rej) => {
+      wfs.on('finish', () => {
+        wfs.close((err) => {
+          if (err) {
+            rej(err)
+          } else {
+            res()
+          }
+        })
+      })
+    })
+  },
+  /**
    * @param {number} ms
    */
   async sleep(ms) {
@@ -152,5 +168,4 @@ module.exports = {
   ...constants,
   ...logHelpers,
   ...zipHelpers,
-  ...threadsHelpers,
 }

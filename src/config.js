@@ -35,7 +35,13 @@ module.exports = {
     port: 4004,
   },
 
-  localThread: isNodeLargerThan16() ? 2 : Math.max(1, os.cpus().length - 3),
+  localThread: isNodeLargerThan16()
+    ? os.platform() === 'win32'
+      ? 5
+      : os.platform() === 'darwin'
+      ? 4
+      : 2
+    : Math.max(1, os.cpus().length - 3),
   serverWorkerThread() {
     if (isNodeLargerThan16()) {
       // sharp

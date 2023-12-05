@@ -42,7 +42,7 @@ module.exports = {
     retried,
     error
   ) {
-    console.error(error.message)
+    console.error(error)
     console.log(
       `<${String(thisIndex).padStart(
         String(fileIndex).length,

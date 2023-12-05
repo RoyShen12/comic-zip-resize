@@ -81,5 +81,4 @@ function readFileOverZip(zipFile, entry) {
 
 module.exports = {
   travelZipFile,
-  readFileOverZip,
 }

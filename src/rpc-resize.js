@@ -6,12 +6,6 @@ const axon = require('axon')
 const { callRpc } = require('./util')
 
 const clients = new Map()
-// remoteServer.map((srv) => {
-//   const reqSocket = axon.socket('req')
-//   const client = new rpc.Client(reqSocket)
-//   reqSocket.connect(4000, srv.ip)
-//   return [srv.ip, client]
-// })
 
 /**
  * @param {string} sourcePath
