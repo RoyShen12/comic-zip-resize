@@ -12,6 +12,7 @@ const clients = new Map()
  * @param {string} destPath
  */
 module.exports = async function (sourceBuffer, destPath, ip, port) {
+  sourceBuffer = Buffer.from(sourceBuffer)
   const s = process.hrtime.bigint()
 
   return await new Promise((res, rej) => {
@@ -30,7 +31,7 @@ module.exports = async function (sourceBuffer, destPath, ip, port) {
       (err, ret) => {
         if (err || !ret) {
           rej(err)
-          console.log(sourceBuffer, err)
+          console.log(err)
           return
         }
 

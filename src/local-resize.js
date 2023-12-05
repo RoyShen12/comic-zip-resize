@@ -5,6 +5,7 @@ const { imgScaleWithRetry } = require('./util')
  * @param {string} destPath
  */
 module.exports = async function (sourceBuffer, destPath) {
+  sourceBuffer = Buffer.from(sourceBuffer)
   const s = process.hrtime.bigint()
 
   await imgScaleWithRetry(sourceBuffer, destPath)

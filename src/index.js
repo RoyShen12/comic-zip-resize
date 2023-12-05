@@ -187,21 +187,16 @@ callRpc(
             logBeforeResize(thisIndex, fileIndex, filePath, entry, isLocal, selectedPool)
 
             try {
-              cost = await selectedPool.pool.exec({
-                task: isLocal
-                  ? ({ sourceBuffer, destPath }) =>
-                      // @ts-ignore
-                      require('./src/local-resize')(sourceBuffer, destPath)
-                  : ({ sourceBuffer, destPath, ip, port }) =>
-                      // @ts-ignore
-                      require('./src/rpc-resize')(sourceBuffer, destPath, ip, port),
-                param: {
-                  sourceBuffer: entryBuffer,
-                  destPath: resizedPath,
-                  ip: selectedPool.ip,
-                  port: selectedPool.port,
-                },
-              })
+              cost = await selectedPool.pool
+                .createExecutor(
+                  isLocal
+                    ? // @ts-ignore
+                      (sourceBuffer, destPath) => require('./src/local-resize')(sourceBuffer, destPath)
+                    : // @ts-ignore
+                      (sourceBuffer, destPath, ip, port) => require('./src/rpc-resize')(sourceBuffer, destPath, ip, port)
+                )
+                .setTransferList([entryBuffer.buffer])
+                .exec(entryBuffer, resizedPath, selectedPool.ip, selectedPool.port)
             } catch (error) {
               const oldSelectedPool = { ...selectedPool }
               const oldIsLocal = isLocal
