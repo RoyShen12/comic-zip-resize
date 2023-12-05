@@ -74,7 +74,8 @@ server.expose(
           const { threadId } = require('worker_threads')
           const chalk = require('chalk')
 
-          const { imgScaleWithRetry } = require('./util')
+          // @ts-ignore
+          const { imgScaleWithRetry } = require('./src/util')
 
           const buffer = Buffer.from(imgBuffer.data)
 
