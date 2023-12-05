@@ -107,6 +107,8 @@ server.expose(
           buffer,
         })
 
+      console.log('transferredBuf', transferredBuf)
+
       fn(null, Buffer.from(transferredBuf))
     } catch (error) {
       console.log(chalk.redBright(`[${index}] throw error`))
