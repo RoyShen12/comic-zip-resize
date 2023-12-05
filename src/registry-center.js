@@ -80,7 +80,7 @@ server.expose(
             1024 /
             1024 /
             1024
-          ).toFixed(1)}GB) nodeV${info.nodeVersion} registered`
+          ).toFixed(1)}GB, worker:${info.threadsCapacity}) nodeV${info.nodeVersion} registered`
         )
         statusMap.set(ip, true)
         fn(null, 'ok')

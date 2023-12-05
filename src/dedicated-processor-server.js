@@ -17,7 +17,6 @@ const { callRpc, quit, ServerInfo } = require('./util')
 const mainPort = 4000
 
 const workerCount = serverWorkerThread()
-console.log(`run with worker`, workerCount)
 
 const thisServerInfo = new ServerInfo(
   mainPort,
