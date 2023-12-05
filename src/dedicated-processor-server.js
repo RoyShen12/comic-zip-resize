@@ -69,6 +69,9 @@ server.expose(
       index++
       const buffer = Buffer.from(imgBuffer.data)
 
+      /**
+       * @type {Uint8Array}
+       */
       const transferredBuf = await threadsPool
         .createExecutor(async ({ index, buffer }) => {
           const { threadId } = require('worker_threads')
@@ -106,8 +109,6 @@ server.expose(
           index,
           buffer,
         })
-
-      console.log('transferredBuf', transferredBuf)
 
       fn(null, Buffer.from(transferredBuf))
     } catch (error) {
