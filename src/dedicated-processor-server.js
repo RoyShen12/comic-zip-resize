@@ -20,6 +20,9 @@ const { callRpc, quit, ServerInfo } = require('./util')
 
 const mainPort = 4000
 
+const workerCount = serverWorkerThread()
+console.log(`run with worker`, workerCount)
+
 const thisServerInfo = new ServerInfo(
   mainPort,
   [
@@ -28,7 +31,7 @@ const thisServerInfo = new ServerInfo(
       port: mainPort,
     },
   ],
-  serverWorkerThread()
+  workerCount
 )
 
 callRpc(
@@ -55,7 +58,7 @@ respSocket.bind(mainPort, '0.0.0.0')
 
 server.expose('alive', (fn) => fn(null, 'still'))
 
-const threadsPool = new DynamicPool(serverWorkerThread())
+const threadsPool = new DynamicPool(workerCount)
 
 let index = 0
 
