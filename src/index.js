@@ -22,7 +22,7 @@ const {
   ZipTreeNode,
   moveUpFilesAndDeleteEmptyFolders,
   checkZipFile,
-  moveAllFiles,
+  removeAllFiles,
   renameEx,
 } = require('./util')
 const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
@@ -146,24 +146,27 @@ callRpc(
 
       if (
         !(await checkZipFile(filePath, async (isWellFormed) => {
-          const unzipPath = path.resolve(tempPath, 'unzip_temp')
-          await unzip(filePath, unzipPath)
+          const tempUnzipPath = path.resolve(tempPath, 'unzip_temp')
+          await unzip(filePath, tempUnzipPath)
           if (isWellFormed === ZipTreeNode.WellFormedType.HasRoot) {
-            await moveUpFilesAndDeleteEmptyFolders(unzipPath)
+            await moveUpFilesAndDeleteEmptyFolders(tempUnzipPath)
           } else {
-            await moveAllFiles(tempPath)
+            await removeAllFiles(tempPath)
           }
           // unzip_temp |- a
           //            |- b
-          const subDirs = (await fs.readdir(unzipPath)).filter((f) => f !== '.DS_Store')
+          const subDirs = (await fs.readdir(tempUnzipPath)).filter((f) => f !== '.DS_Store')
           const newZipFilePaths = await Promise.all(
             subDirs.map(async (subDir) => {
-              const subPath = path.resolve(unzipPath, subDir)
+              const subPath = path.resolve(tempUnzipPath, subDir)
               const outPath = await zipDirectory(subPath)
               // clean unzipped files
               await fs.rm(subPath, { recursive: true, force: true })
               // move to origin path
-              const newFilePath = path.resolve(filePath, '..', path.parse(outPath).base)
+              const outPathParsed = path.parse(outPath)
+              const originFileName = filePathParsed.name
+              const insert = originFileName === outPathParsed.name ? '[rezip]' : ''
+              const newFilePath = path.resolve(filePath, '..', `${outPathParsed.name}${insert}${outPathParsed.ext}`)
               await renameEx(outPath, newFilePath)
               return newFilePath
             })
@@ -173,9 +176,14 @@ callRpc(
             for (const newZipFilePath of newZipFilePaths) {
               await scanZipFile(newZipFilePath)
             }
+          } else {
+            /** @debug */
+            process.exit(0)
           }
         }))
       ) {
+        /** @debug */
+        process.exit(0)
         return
       }
 

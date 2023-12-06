@@ -71,6 +71,7 @@ async function* travelZipFile(filePath, options) {
       break
     }
     const [entry, type] = entryRes
+    entry.fileName = entry.fileName.normalize('NFC')
     /**
      * @type {{type: 'dir' | 'file', entry: yauzl.Entry, fileStream?: import('stream').Readable}}
      */
@@ -232,7 +233,7 @@ async function checkZipFile(filePath, onWellFormed) {
           console.warn(
             chalk.yellowBright(
               `check zip file ${chalk.bold(filePath)} error: get zipDirCount > 1 in one file ${chalk.bold(
-                'but is wellFormed, will split it'
+                `but is wellFormed ${chalk.bold(isWellFormed)}, will split it`
               )}`
             )
           )

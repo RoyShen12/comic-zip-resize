@@ -7,7 +7,7 @@ module.exports = {
   /**
    * @param {string} dir
    */
-  async moveAllFiles(dir) {
+  async removeAllFiles(dir) {
     return Promise.all(
       (await fs.readdir(dir, { withFileTypes: true })).filter((subF) => subF.isFile()).map((subF) => fs.rm(path.resolve(dir, subF.name)))
     )
