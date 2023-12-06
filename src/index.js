@@ -29,6 +29,7 @@ const { createRandomPicker, closeAllPools, choosePool } = require('./threads-hel
 
 const workingDir = process.argv[2]
 const noResizeMode = process.argv.includes('--no-resize')
+const silenceMode = process.argv.includes('--silence')
 
 if (!workingDir) {
   quit('working dir is empty')
@@ -96,7 +97,7 @@ callRpc(
     }
 
     async function scanDirectory(pathParam) {
-      console.log(`scan dir: ${chalk.blueBright(pathParam)}`)
+      if (!silenceMode) console.log(`scan dir: ${chalk.blueBright(pathParam)}`)
       const subFiles = await fs.readdir(pathParam)
 
       for (const subFile of subFiles) {
@@ -124,7 +125,7 @@ callRpc(
      * @param {string} filePath
      */
     async function scanZipFile(filePath) {
-      console.log(`scan file: ${chalk.magentaBright(filePath)}`)
+      if (!silenceMode) console.log(`scan file: ${chalk.magentaBright(filePath)}`)
       const fileBaseName = path.basename(filePath)
       const filePathParsed = path.parse(filePath)
       const fileLowQualityPath = `${filePathParsed.dir}/${filePathParsed.name} ${SHARP_FILE_NAME_SUFFIX}${filePathParsed.ext}`

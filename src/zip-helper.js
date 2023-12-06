@@ -172,7 +172,7 @@ class ZipTreeNode {
    */
   isWellFormed() {
     // 如果 root 节点下只有一个文件夹，递归判断这个文件夹是否 isWellFormed
-    if (this.children?.length === 1 && this.children[0].isDirectory()) {
+    if (this.name === '/' && this.children?.length === 1 && this.children[0].isDirectory()) {
       return this.children[0].isWellFormed()
     }
 
