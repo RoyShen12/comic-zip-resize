@@ -25,6 +25,7 @@ const {
   moveUpFilesAndDeleteEmptyFolders,
   checkZipFile,
   moveAllFiles,
+  renameEx,
 } = require('./util')
 const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
 
@@ -149,7 +150,7 @@ callRpc(
           }
           // unzip_temp |- a
           //            |- b
-          const subDirs = await fs.readdir(unzipPath)
+          const subDirs = (await fs.readdir(unzipPath)).filter((f) => f !== '.DS_Store')
           const newZipFilePaths = await Promise.all(
             subDirs.map(async (subDir) => {
               const subPath = path.resolve(unzipPath, subDir)
@@ -158,12 +159,14 @@ callRpc(
               await fs.rm(subPath, { recursive: true, force: true })
               // move to origin path
               const newFilePath = path.resolve(filePath, '..', path.parse(outPath).base)
-              await fs.rename(outPath, newFilePath)
+              await renameEx(outPath, newFilePath)
               return newFilePath
             })
           )
           await fs.rm(filePath)
-          await Promise.all(newZipFilePaths.map((newZipFilePath) => scanZipFile(newZipFilePath)))
+          for (const newZipFilePath of newZipFilePaths) {
+            await scanZipFile(newZipFilePath)
+          }
         }))
       ) {
         return

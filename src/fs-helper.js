@@ -1,6 +1,7 @@
 const fsSync = require('fs')
 const path = require('path')
 const { promises: fs } = fsSync
+const { promises: stream } = require('stream')
 
 module.exports = {
   /**
@@ -42,6 +43,25 @@ module.exports = {
       // After moving all files, check if directory is empty then delete
       if ((await fs.readdir(fullSubfolderPath)).length === 0) {
         await fs.rm(fullSubfolderPath, { recursive: true, force: true })
+      }
+    }
+  },
+  /**
+   * @param {fsSync.PathLike} oldPath
+   * @param {fsSync.PathLike} newPath
+   */
+  async renameEx(oldPath, newPath) {
+    try {
+      await fs.rename(oldPath, newPath)
+    } catch (error) {
+      if (error.code === 'EXDEV') {
+        // Indicates the error is 'cross-device link not permitted'
+        await stream.pipeline(fsSync.createReadStream(oldPath), fsSync.createWriteStream(newPath))
+
+        // Once the file is copied successfully, remove it from the oldPath
+        await fs.unlink(oldPath)
+      } else {
+        throw error
       }
     }
   },
