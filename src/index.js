@@ -4,7 +4,6 @@ const path = require('path')
 const { createWriteStream } = fsModule
 const fs = fsModule.promises
 
-const archiver = require('archiver')
 const chalk = require('chalk')
 const { v4: uuidV4 } = require('uuid')
 
@@ -18,7 +17,6 @@ const {
   logStartFileProcess,
   travelZipFile,
   readStreamToBuffer,
-  getZipTree,
   zipDirectory,
   unzip,
   ZipTreeNode,
@@ -30,6 +28,7 @@ const {
 const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
 
 const workingDir = process.argv[2]
+const noResizeMode = process.argv.includes('--no-resize')
 
 if (!workingDir) {
   quit('working dir is empty')
@@ -67,7 +66,11 @@ callRpc(
   (err, remoteServer) => {
     let localMode = false
 
-    if (err || !remoteServer) {
+    if (noResizeMode) {
+      localMode = true
+    }
+
+    if (!localMode && (err || !remoteServer)) {
       console.log(err)
       console.log('get "getMethodConfig" failed! run in local mode')
       localMode = true
@@ -121,6 +124,7 @@ callRpc(
      * @param {string} filePath
      */
     async function scanZipFile(filePath) {
+      console.log(`scan file: ${chalk.magentaBright(filePath)}`)
       const fileBaseName = path.basename(filePath)
       const filePathParsed = path.parse(filePath)
       const fileLowQualityPath = `${filePathParsed.dir}/${filePathParsed.name} ${SHARP_FILE_NAME_SUFFIX}${filePathParsed.ext}`
@@ -164,13 +168,17 @@ callRpc(
             })
           )
           await fs.rm(filePath)
-          for (const newZipFilePath of newZipFilePaths) {
-            await scanZipFile(newZipFilePath)
+          if (!noResizeMode) {
+            for (const newZipFilePath of newZipFilePaths) {
+              await scanZipFile(newZipFilePath)
+            }
           }
         }))
       ) {
         return
       }
+
+      if (noResizeMode) return
 
       logStartFileProcess(filePath, tempPath)
 
