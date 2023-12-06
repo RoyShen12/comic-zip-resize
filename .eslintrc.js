@@ -21,6 +21,7 @@ module.exports = {
   },
   rules: {
     'no-unused-vars': 1,
+    'no-extra-semi': 0,
     'no-magic-numbers': [
       'warn',
       {

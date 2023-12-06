@@ -6,22 +6,33 @@ module.exports = {
     console.log(`process file: ${chalk.cyanBright(filePath)} -> ${chalk.whiteBright(tempPath)}`)
   },
   logBeforeResize(thisIndex, fileIndex, filePath, entry, isLocal, selectedPool) {
-    console.log(
-      `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> ${path.basename(filePath)}/${chalk.blueBright(
-        entry.fileName
-      )} dispatch to [${isLocal ? chalk.magentaBright('L ') : chalk.cyanBright('R' + selectedPool.remoteIndex)}]`
-    )
+    // console.log(
+    //   `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> ${path.basename(filePath)}/${chalk.blueBright(
+    //     entry.fileName
+    //   )} dispatch to [${isLocal ? chalk.magentaBright('L ') : chalk.cyanBright('R' + selectedPool.remoteIndex)}]`
+    // )
   },
-  logWhileChangeServer(thisIndex, fileIndex, filePath, entry, isLocal, selectedPool, oldIsLocal, oldSelectedPool, retried, error) {
+  logWhileChangeServer(
+    thisIndex,
+    fileIndex,
+    filePath,
+    entry,
+    isLocal,
+    selectedPool,
+    oldIsLocal,
+    oldSelectedPool,
+    retried,
+    error
+  ) {
     console.error(error)
     console.log(
       `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> ${path.basename(filePath)}/${chalk.blueBright(
         entry.fileName
       )} ${chalk.redBright('Re')}dispatch from [${
         oldIsLocal ? chalk.magentaBright('L ') : chalk.cyanBright('R' + oldSelectedPool.remoteIndex)
-      }] --> [${isLocal ? chalk.magentaBright('L ') : chalk.cyanBright('R' + selectedPool.remoteIndex)}] (retried ${chalk.redBright(
-        retried
-      )})`
+      }] --> [${
+        isLocal ? chalk.magentaBright('L ') : chalk.cyanBright('R' + selectedPool.remoteIndex)
+      }] (retried ${chalk.redBright(retried)})`
     )
   },
   logAfterResize(
@@ -50,9 +61,12 @@ module.exports = {
     console.log(
       `<${String(thisIndex).padStart(String(fileIndex).length, ' ')}> (${fileSpeed}) [${
         isLocal ? chalk.magentaBright('L ') : chalk.cyanBright('R' + selectedPool.remoteIndex)
-      }][${chalk.magentaBright(threadId)}] ${chalk.greenBright('resizing file')} (${String(processedEntry).padStart(3, ' ')}/${String(
-        entryCount
-      ).padStart(3, ' ')}) ${path.basename(filePath)}/${chalk.blueBright(entry.fileName)} ${timeCost}, speed: ${speed}`
+      }][${chalk.magentaBright(threadId)}] ${chalk.greenBright('resizing file')} (${String(processedEntry).padStart(
+        3,
+        ' '
+      )}/${String(entryCount).padStart(3, ' ')}) ${path.basename(filePath)}/${chalk.blueBright(
+        entry.fileName
+      )} ${timeCost}, speed: ${speed}`
     )
   },
   logAfterSkipped(thisIndex, fileIndex, processedEntry, entryCount, filePath, entry) {

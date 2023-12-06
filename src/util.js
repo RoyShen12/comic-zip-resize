@@ -19,6 +19,7 @@ const constants = require('./constants')
 const logHelpers = require('./log-helper')
 const zipHelpers = require('./zip-helper')
 const streamToBuffer = require('fast-stream-to-buffer')
+const fsHelper = require('./fs-helper')
 
 async function jimpReadImage(source, maxRetries = MAX_RETRY) {
   let retries = 0
@@ -109,6 +110,7 @@ module.exports = {
    * @param {import('node-worker-threads-pool').DynamicPool | null} [pool]
    */
   poolIsIdle(pool) {
+    // @ts-ignore
     return pool && pool.workers && pool.workers.some((w) => w.ready)
   },
   async waitForPoolIdle(pool) {
@@ -158,4 +160,5 @@ module.exports = {
   ...constants,
   ...logHelpers,
   ...zipHelpers,
+  ...fsHelper,
 }

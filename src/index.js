@@ -18,6 +18,13 @@ const {
   logStartFileProcess,
   travelZipFile,
   readStreamToBuffer,
+  getZipTree,
+  zipDirectory,
+  unzip,
+  ZipTreeNode,
+  moveUpFilesAndDeleteEmptyFolders,
+  checkZipFile,
+  moveAllFiles,
 } = require('./util')
 const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
 
@@ -45,6 +52,7 @@ const configServerSocket = axon.socket('req')
 const configServerClient = new configRpc.Client(configServerSocket)
 configServerSocket.connect(registryServer.port, registryServer.ip)
 
+let getConfigTimer
 let fileIndex = 0
 
 callRpc(
@@ -56,25 +64,32 @@ callRpc(
    * @param {{ip: string, port: number, threads: number}[]} remoteServer
    */
   (err, remoteServer) => {
+    let localMode = false
+
     if (err || !remoteServer) {
       console.log(err)
-      quit('get "getMethodConfig" failed!')
+      console.log('get "getMethodConfig" failed! run in local mode')
+      localMode = true
     }
 
+    remoteServer = []
+
     const randomDispatcher = { fn: createRandomPicker(remoteServer) }
-    const getConfigTimer = setInterval(() => {
-      callRpc(
-        configServerClient,
-        'getMethodConfig',
-        ['resize'],
-        (err, remoteServer) => {
-          if (!err && remoteServer) {
-            randomDispatcher.fn = createRandomPicker(remoteServer)
-          }
-        },
-        REMOTE_CONFIG_TIMEOUT
-      )
-    }, REMOTE_CONFIG_REFRESH)
+    if (!localMode) {
+      getConfigTimer = setInterval(() => {
+        callRpc(
+          configServerClient,
+          'getMethodConfig',
+          ['resize'],
+          (err, remoteServer) => {
+            if (!err && remoteServer) {
+              randomDispatcher.fn = createRandomPicker(remoteServer)
+            }
+          },
+          REMOTE_CONFIG_TIMEOUT
+        )
+      }, REMOTE_CONFIG_REFRESH)
+    }
 
     async function scanDirectory(pathParam) {
       console.log(`scan dir: ${chalk.blueBright(pathParam)}`)
@@ -122,6 +137,38 @@ callRpc(
       const id = uuidV4()
       const tempPath = path.resolve(TMP_PATH, id)
       await fs.mkdir(tempPath, { recursive: true })
+
+      if (
+        !(await checkZipFile(filePath, async (isWellFormed) => {
+          const unzipPath = path.resolve(tempPath, 'unzip_temp')
+          await unzip(filePath, unzipPath)
+          if (isWellFormed === ZipTreeNode.WellFormedType.HasRoot) {
+            await moveUpFilesAndDeleteEmptyFolders(unzipPath)
+          } else {
+            await moveAllFiles(tempPath)
+          }
+          // unzip_temp |- a
+          //            |- b
+          const subDirs = await fs.readdir(unzipPath)
+          const newZipFilePaths = await Promise.all(
+            subDirs.map(async (subDir) => {
+              const subPath = path.resolve(unzipPath, subDir)
+              const outPath = await zipDirectory(subPath)
+              // clean unzipped files
+              await fs.rm(subPath, { recursive: true, force: true })
+              // move to origin path
+              const newFilePath = path.resolve(filePath, '..', path.parse(outPath).base)
+              await fs.rename(outPath, newFilePath)
+              return newFilePath
+            })
+          )
+          await fs.rm(filePath)
+          await Promise.all(newZipFilePaths.map((newZipFilePath) => scanZipFile(newZipFilePath)))
+        }))
+      ) {
+        return
+      }
+
       logStartFileProcess(filePath, tempPath)
 
       /**
@@ -171,9 +218,6 @@ callRpc(
         if (type === 'dir') {
           console.log(`${chalk.yellowBright('entry(dir)')}: ${chalk.gray(entry.fileName)}`)
           zipDirCount++
-          if (zipDirCount > 1) {
-            throw new Error('error get zipDirCount > 1 in one file')
-          }
         } else {
           const { name: entryName, ext: entryExtName, base: entryBaseName } = path.parse(entry.fileName)
 
@@ -288,42 +332,15 @@ callRpc(
         console.log(chalk.yellowBright(`${path.basename(filePath)} no change and skip zipping`))
       } else {
         // promise of zip resized files
-        await new Promise((zipRes, zipRej) => {
-          const output = createWriteStream(fileLowQualityPath)
-          const archive = archiver('zip', {
-            zlib: {
-              level: 0,
-            },
-          })
-
-          output.on('close', function () {
+        await zipDirectory(
+          tempPath,
+          createWriteStream(fileLowQualityPath),
+          () => console.log(`${chalk.cyanBright(path.basename(filePath))} ${chalk.greenBright('start zipping')}`),
+          (pointer) =>
             console.log(
-              `${chalk.greenBright(path.basename(filePath))} zip size: ${chalk.blueBright(`${(archive.pointer() / 1e6).toFixed(1)} MB`)}`
+              `${chalk.greenBright(path.basename(filePath))} zip size: ${chalk.blueBright(`${(pointer / 1e6).toFixed(1)} MB`)}`
             )
-            zipRes(undefined)
-          })
-
-          archive.on('warning', function (err) {
-            if (err.code === 'ENOENT') {
-              console.log(chalk.redBright('archive on warning: ENOENT'))
-              console.error(err)
-            } else {
-              zipRej(err)
-            }
-          })
-
-          archive.on('error', function (err) {
-            zipRej(err)
-          })
-
-          archive.pipe(output)
-
-          console.log(`${chalk.cyanBright(path.basename(filePath))} ${chalk.greenBright('start zipping')}`)
-
-          archive.directory(tempPath, false)
-
-          archive.finalize()
-        })
+        )
       }
     }
 
@@ -333,9 +350,11 @@ callRpc(
         closeAllPools()
         return fs.readdir(TMP_PATH)
       })
-      .then((fileNodes) => {
-        return Promise.all(fileNodes.map((fp) => fs.rm(path.resolve(TMP_PATH, fp), { recursive: true, force: true })))
-      })
+      .then((fileNodes) =>
+        process.env.NO_CLEAN
+          ? Promise.resolve([])
+          : Promise.all(fileNodes.map((fp) => fs.rm(path.resolve(TMP_PATH, fp), { recursive: true, force: true })))
+      )
       .then(() => {
         configServerSocket.close()
         process.exit(0)
