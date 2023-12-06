@@ -34,9 +34,30 @@ module.exports = {
         const oldPath = path.join(fullSubfolderPath, file)
         const newPath = path.join(dir, file)
 
+        // dir  |- subfolder1  |- file1
+        //      |              |- file2
+        //      |
+        //      |- subfolder2
+        //
+        //
+        // dir  |-  file1
+        //      |-  file2
+        //      |-  subfolder2
+
         // Make sure not to overwrite existing files in the destination
         if (!fsSync.existsSync(newPath)) {
           await fs.rename(oldPath, newPath)
+        } else if (
+          (await fs.stat(oldPath)).isDirectory() &&
+          (await fs.stat(newPath)).isDirectory() &&
+          (await fs.readdir(newPath)).length === 1
+        ) {
+          // move oldPath/*  -->   newPath/*
+          // rm -r oldPath
+          await Promise.all(
+            (await fs.readdir(oldPath)).map((oldFiles) => fs.rename(path.resolve(oldPath, oldFiles), path.resolve(newPath, oldFiles)))
+          )
+          fs.rm(oldPath, { recursive: true })
         }
       }
 

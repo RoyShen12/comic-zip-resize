@@ -142,10 +142,11 @@ callRpc(
       const thisIndex = fileIndex
       const id = uuidV4()
       const tempPath = path.resolve(TMP_PATH, id)
-      await fs.mkdir(tempPath, { recursive: true })
 
       if (
         !(await checkZipFile(filePath, async (isWellFormed) => {
+          if (!fsModule.existsSync(tempPath)) await fs.mkdir(tempPath, { recursive: true })
+
           const tempUnzipPath = path.resolve(tempPath, 'unzip_temp')
           await unzip(filePath, tempUnzipPath)
           if (isWellFormed === ZipTreeNode.WellFormedType.HasRoot) {
@@ -165,7 +166,7 @@ callRpc(
               // move to origin path
               const outPathParsed = path.parse(outPath)
               const originFileName = filePathParsed.name
-              const insert = originFileName === outPathParsed.name ? '[rezip]' : ''
+              const insert = originFileName.normalize('NFC') === outPathParsed.name.normalize('NFC') ? '[rezip]' : ''
               const newFilePath = path.resolve(filePath, '..', `${outPathParsed.name}${insert}${outPathParsed.ext}`)
               await renameEx(outPath, newFilePath)
               return newFilePath
@@ -176,18 +177,15 @@ callRpc(
             for (const newZipFilePath of newZipFilePaths) {
               await scanZipFile(newZipFilePath)
             }
-          } else {
-            /** @debug */
-            process.exit(0)
           }
         }))
       ) {
-        /** @debug */
-        process.exit(0)
         return
       }
 
       if (noResizeMode) return
+
+      if (!fsModule.existsSync(tempPath)) await fs.mkdir(tempPath, { recursive: true })
 
       logStartFileProcess(filePath, tempPath)
 
@@ -241,7 +239,7 @@ callRpc(
         } else {
           const { name: entryName, ext: entryExtName, base: entryBaseName } = path.parse(entry.fileName)
 
-          if (entryExtName === '.db' || entryName.startsWith('.')) {
+          if (entryExtName === '.db' || entryExtName === '.txt' || entryName.startsWith('.')) {
             // just skip it
             trashFileCount++
             continue
