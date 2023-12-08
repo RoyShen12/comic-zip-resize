@@ -6,6 +6,7 @@ const fs = fsModule.promises
 
 const chalk = require('chalk')
 const { v4: uuidV4 } = require('uuid')
+const stringSimilarity = require('string-similarity')
 
 const {
   quit,
@@ -24,11 +25,15 @@ const {
   checkZipFile,
   removeAllFiles,
   renameEx,
+  pathToHighlight,
+  hasDuplicates,
 } = require('./util')
 const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
 
 const workingDir = process.argv[2]
 const noResizeMode = process.argv.includes('--no-resize')
+const oneShotCheck = process.argv.includes('--oneshot')
+const oneShotDryRun = oneShotCheck && process.argv.includes('--dry-run')
 const silenceMode = process.argv.includes('--silence')
 
 if (!workingDir) {
@@ -45,6 +50,8 @@ const {
   REMOTE_CONFIG_TIMEOUT,
   SHARP_MIN_SIZE,
   SHARP_FILE_NAME_SUFFIX,
+  oneShotSuffix,
+  oneShotFileNameAfterProcessor,
 } = require('./config')
 const { timeProbe } = require('./debug')
 
@@ -55,6 +62,8 @@ configServerSocket.connect(registryServer.port, registryServer.ip)
 
 let getConfigTimer
 let fileIndex = 0
+
+const dryRunOneShotFiles = []
 
 callRpc(
   configServerClient,
@@ -67,7 +76,7 @@ callRpc(
   (err, remoteServer) => {
     let localMode = false
 
-    if (noResizeMode) {
+    if (noResizeMode || oneShotCheck) {
       localMode = true
     }
 
@@ -98,21 +107,82 @@ callRpc(
 
     async function scanDirectory(pathParam) {
       if (!silenceMode) console.log(`scan dir: ${chalk.blueBright(pathParam)}`)
-      const subFiles = await fs.readdir(pathParam)
+      const subFiles = (await fs.readdir(pathParam)).filter((subFile) => subFile !== '.DS_Store')
 
       for (const subFile of subFiles) {
         const subPath = path.resolve(pathParam, subFile)
 
-        const subStat = await fs.stat(subPath)
+        const subPathStat = await fs.stat(subPath)
 
-        if (subStat.isDirectory()) {
+        if (subPathStat.isDirectory()) {
           await scanDirectory(subPath)
-        } else if (subStat.isFile() && !subStat.isSymbolicLink() && subFile.endsWith('.zip')) {
-          try {
-            await scanZipFile(subPath)
-          } catch (error) {
-            console.log(`error on file ${subPath}`)
-            console.log(error)
+        } else if (subPathStat.isFile() && !subPathStat.isSymbolicLink() && subFile.endsWith('.zip')) {
+          // one shot check
+          // https://komga.org/docs/guides/oneshots/
+          if (oneShotCheck) {
+            const oneshotPath = path.resolve(pathParam, '..', '_oneshots')
+
+            const pathParamName = path.parse(pathParam).base
+            const subFileName = path.parse(subFile).name
+            const pathNameAndFileNameSimilarity = stringSimilarity.compareTwoStrings(pathParamName, subFileName)
+
+            const oneShotFileName = oneShotFileNameAfterProcessor(pathParamName) + '.zip'
+            const subFileNewPath = path.resolve(oneshotPath, oneShotFileName)
+
+            if (subFiles.length === 1 && !fsModule.existsSync(subFileNewPath)) {
+              if (
+                pathNameAndFileNameSimilarity === 1 ||
+                // oneShotSuffix.some((suf) => pathParamName + suf === subFileName)
+                oneShotSuffix.some((suf) => stringSimilarity.compareTwoStrings(pathParamName + suf, subFileName) === 1)
+              ) {
+                // library level:
+                // series level:          pathParam
+                // book level:    *.zip   subPath
+
+                console.log(`${chalk.yellowBright('oneShotCheck get target')} ${pathToHighlight(subPath)}`)
+
+                // move subPath -> series/_oneshots && rm -r pathParam (should be empty)
+
+                if (!fsModule.existsSync(oneshotPath)) await fs.mkdir(oneshotPath)
+
+                if (oneShotDryRun) {
+                  console.log(
+                    `dry run fs: fs.rename(\n${chalk.redBright(pathToHighlight(subPath))},\n${chalk.greenBright(
+                      pathToHighlight(subFileNewPath)
+                    )}\n)`
+                  )
+                  console.log(`dry run fs: fs.rm(${chalk.redBright(pathToHighlight(pathParam))}, { recursive: true })`)
+                  dryRunOneShotFiles.push(oneShotFileName)
+                  dryRunOneShotFiles.sort()
+                  console.log('dryRunOneShotFiles has dup:', hasDuplicates(dryRunOneShotFiles))
+                } else {
+                  await fs.rename(subPath, subFileNewPath)
+                  await fs.rm(pathParam, { recursive: true })
+                }
+                console.log('\n')
+                return
+              } else {
+                console.log(`pathParamName: ${pathParamName}`)
+                console.log(`subFileName: ${subFileName}`)
+                console.log(`Similarity`, pathNameAndFileNameSimilarity)
+                console.log(
+                  oneShotSuffix
+                    .map(
+                      (suf) =>
+                        `Similarity[${suf}]: ${chalk.yellowBright(stringSimilarity.compareTwoStrings(pathParamName + suf, subFileName))}`
+                    )
+                    .join('\n')
+                )
+                console.log('\n')
+              }
+            }
+          } else {
+            try {
+              await scanZipFile(subPath)
+            } catch (error) {
+              console.log(`error on file ${subPath}`)
+              console.log(error)
+            }
           }
         }
       }
@@ -375,6 +445,10 @@ callRpc(
       )
       .then(() => {
         configServerSocket.close()
+        if (oneShotCheck && dryRunOneShotFiles) {
+          console.log('dryRunOneShotFiles:')
+          dryRunOneShotFiles.sort().forEach((dryFile) => console.log(dryFile))
+        }
         process.exit(0)
       })
   },

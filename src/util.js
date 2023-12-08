@@ -20,6 +20,7 @@ const logHelpers = require('./log-helper')
 const zipHelpers = require('./zip-helper')
 const streamToBuffer = require('fast-stream-to-buffer')
 const fsHelper = require('./fs-helper')
+const path = require('path')
 
 async function jimpReadImage(source, maxRetries = MAX_RETRY) {
   let retries = 0
@@ -43,6 +44,20 @@ module.exports = {
   quit: function (msg = 'error & quit', code = 2) {
     console.log(chalk.redBright(msg))
     process.exit(code)
+  },
+  /**
+   * @param {string} filePath
+   */
+  pathToHighlight(filePath) {
+    return (
+      filePath
+        .split(path.sep)
+        // .map((subP) => chalk.bold(subP))
+        .join(chalk.bold(path.sep))
+    )
+  },
+  hasDuplicates(array) {
+    return new Set(array).size !== array.length
   },
   callRpc(client, name, args, callback, timeout = RPC_TIMEOUT) {
     const callId = uuidV4()

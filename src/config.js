@@ -64,5 +64,81 @@ module.exports = {
   // 心跳检查间隔
   ALIVE_INTERVAL: 2000,
 
+  // one shot check
+  oneShotSuffix: [' - 第1集', ' - 第1話', ' - 熟肉', ' - 生肉', ' - 正文'],
+  /**
+   * @param {string} name
+   */
+  oneShotFileNameAfterProcessor(name) {
+    const trash = [
+      '[CE家族社]',
+      '（落莲汉化组）',
+      '（个人渣翻）',
+      '[汉化]',
+      '[漢化]',
+      '[萌姬天堂]',
+      '[中文]',
+      '[无毒修图组]',
+      '[无毒气X光年]',
+      '[无毒漢化组]',
+      '[背徳漢 (背徳漢)]',
+      '[52H里漫画组]',
+      '[RHC80小组]',
+      '[CE×无毒联合汉化]',
+      '[Aeroblast 个人汉化]',
+      /【CE[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\w]+】/gu,
+      /^\[[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★\w]+个人汉化\]/gu,
+      /^\([\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★\w]+个人汉化\)/gu,
+      /^（[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★\w]+个人汉化）/gu,
+      /^\[[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★\w]+個人漢化\]/gu,
+      /^\[[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★\w]+汉化组?\]/gu,
+      /^\[[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★\w]+漢化組?\]/gu,
+      /^\[[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★\w]+掃圖\]/gu,
+      /^\[[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★&\w]+联合汉化组?\]/gu,
+      /^\[[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★&\w]+合作汉化组?\]/gu,
+      /^【[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★\w]+汉化组?】/gu,
+      /^【[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}☆★\w]+漢化組?】/gu,
+      /^个人汉化/,
+      '(流星个人汉化)',
+      '(E个人汉化）',
+      '[朔夜汉化013]',
+      '[无毒X樱丘]',
+      /^012/,
+      /^013/,
+      /^\(成年コミック\)/,
+    ]
+    let removedItems = []
+    const batchAfter = trash.reduce(
+      /**
+       * @param {string} prev
+       * @param {string | RegExp} current
+       * @returns
+       */
+      (prev, current) => {
+        let after = prev
+
+        if (typeof current === 'string') {
+          while (after.includes(current)) {
+            after = after.replace(current, '')
+            removedItems.push(current)
+          }
+        } else if (current instanceof RegExp) {
+          let match
+          while ((match = current.exec(after)) !== null) {
+            after = after.replace(match[0], '')
+            removedItems.push(match[0])
+          }
+        }
+
+        return after
+      },
+      name.normalize('NFC')
+    )
+
+    const result = batchAfter + removedItems.join('')
+    // console.log(`before ${name}\nafter  ${result}`)
+    return result.replace(/^\s+/, '').replace(/\s+$/, '').normalize('NFC')
+  },
+
   isNodeLargerThan16,
 }
