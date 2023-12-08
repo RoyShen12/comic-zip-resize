@@ -31,6 +31,7 @@ const {
 const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
 
 const workingDir = process.argv[2]
+const noFixZip = process.argv.includes('--no-fix-zip')
 const noResizeMode = process.argv.includes('--no-resize')
 const oneShotCheck = process.argv.includes('--oneshot')
 const oneShotDryRun = oneShotCheck && process.argv.includes('--dry-run')
@@ -213,8 +214,10 @@ callRpc(
       const id = uuidV4()
       const tempPath = path.resolve(TMP_PATH, id)
 
+      // check and fix zip structure
       if (
         !(await checkZipFile(filePath, async (isWellFormed) => {
+          if (noFixZip) return
           if (!fsModule.existsSync(tempPath)) await fs.mkdir(tempPath, { recursive: true })
 
           const tempUnzipPath = path.resolve(tempPath, 'unzip_temp')
