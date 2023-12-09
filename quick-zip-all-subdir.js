@@ -1,8 +1,7 @@
 const fs = require('fs')
 const path = require('path')
-const archiver = require('archiver')
 
-const { quit } = require('./src/util')
+const { quit, zipDirectory } = require('./src/util')
 const chalk = require('chalk')
 
 const workingDir = process.argv[2]
@@ -17,47 +16,23 @@ const dirs = fs
   .filter((dirent) => dirent.isDirectory())
   .map((dirent) => dirent.name)
 
-dirs.forEach((dir) => {
-  const dirPath = path.join(workingDir, dir)
-  // check dir inside is all file
-  if (fs.readdirSync(dirPath, { withFileTypes: true }).some((fd) => !fd.isFile())) {
-    quit(`some in ${dirPath} is not file!`)
-  }
-  // 创建一个.archiver对象
-  const archive = archiver('zip', {
-    zlib: { level: 0 }, // 压缩级别
-  })
-  archive.on('warning', (err) => {
-    if (err.code === 'ENOENT') {
-      console.log(chalk.redBright('archive on warning: ENOENT'))
-      console.error(err)
-    } else {
-      throw err
-    }
-  })
-  archive.on('error', (err) => {
-    console.log(chalk.redBright('archive on error'))
-    console.error(err)
-    throw err
-  })
+;(async () => {
+  await Promise.all(
+    dirs.map(async (dir) => {
+      const dirPath = path.join(workingDir, dir)
+      // check dir inside is all file
+      if ((await fs.promises.readdir(dirPath, { withFileTypes: true })).some((fd) => !fd.isFile())) {
+        return console.error(chalk.redBright(`some in ${dirPath} is not file!`))
+      }
 
-  const output = fs.createWriteStream(path.join(workingDir, dir + '.zip'), {
-    highWaterMark: 1024 * 1024 * 16,
-  })
-  output.on('error', (err) => {
-    console.log(chalk.redBright('archive on write stream error'))
-    console.error(err)
-    throw err
-  })
-  output.on('close', function () {
-    console.log(archive.pointer() + ' total bytes')
-    console.log(`archiver has been finalized and the output file descriptor has closed.`)
-
-    // 删除源目录
-    fs.rmSync(dirPath, { recursive: true })
-  })
-
-  archive.pipe(output)
-  archive.directory(dirPath, false)
-  archive.finalize()
-})
+      await zipDirectory(
+        dirPath,
+        fs.createWriteStream(path.join(workingDir, dir + '.zip'), {
+          highWaterMark: 1024 * 1024 * 16,
+        }),
+        undefined,
+        (pointer) => console.log((pointer / 1024 / 1024).toFixed(1) + ' total M bytes')
+      )
+    })
+  )
+})()
