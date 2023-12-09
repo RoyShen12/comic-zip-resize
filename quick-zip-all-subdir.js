@@ -19,6 +19,10 @@ const dirs = fs
 
 dirs.forEach((dir) => {
   const dirPath = path.join(workingDir, dir)
+  // check dir inside is all file
+  if (fs.readdirSync(dirPath, { withFileTypes: true }).some((fd) => !fd.isFile())) {
+    quit(`some in ${dirPath} is not file!`)
+  }
   // 创建一个.archiver对象
   const archive = archiver('zip', {
     zlib: { level: 0 }, // 压缩级别
