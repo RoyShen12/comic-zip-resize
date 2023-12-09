@@ -31,7 +31,10 @@ const dirs = fs
           highWaterMark: 1024 * 1024 * 16,
         }),
         undefined,
-        (pointer) => console.log((pointer / 1024 / 1024).toFixed(1) + ' total M bytes')
+        async (pointer) => {
+          console.log((pointer / 1024 / 1024).toFixed(1) + ' total M bytes')
+          await fs.promises.rm(dirPath, { recursive: true })
+        }
       )
     })
   )

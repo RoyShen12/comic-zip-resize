@@ -257,7 +257,7 @@ async function checkZipFile(filePath, onWellFormed) {
  * @param {string} dir
  * @param {import('stream').Writable} [outputStream]
  * @param {() => void} [onStartZipping]
- * @param {(pointer: number) => void} [onWriteFinish]
+ * @param {(pointer: number) => void | Promise<void>} [onWriteFinish]
  * @returns {Promise<string>}
  */
 function zipDirectory(dir, outputStream, onStartZipping, onWriteFinish) {
@@ -280,8 +280,8 @@ function zipDirectory(dir, outputStream, onStartZipping, onWriteFinish) {
       console.error(err)
       rej(err)
     })
-    outputStream.on('close', () => {
-      onWriteFinish?.(archive.pointer())
+    outputStream.on('close', async () => {
+      await onWriteFinish?.(archive.pointer())
       res(zipPath)
     })
 
