@@ -33,6 +33,7 @@ const { createRandomPicker, closeAllPools, choosePool } = require('./threads-hel
 
 const workingDir = process.argv[2]
 const noFixZip = process.argv.includes('--no-fix-zip')
+const forceFixZip = process.argv.includes('--force-fix-zip')
 const noResizeMode = process.argv.includes('--no-resize')
 const oneShotCheck = process.argv.includes('--oneshot')
 const oneShotDryRun = oneShotCheck && process.argv.includes('--dry-run')
