@@ -16,6 +16,7 @@
     "axon-rpc": "^0.0.3",
     "chalk": "4",
     "fast-stream-to-buffer": "^1.0.0",
+    "get-folder-size": "^4.0.0",
     "jimp": "^0.22.10",
     "jpeg-js": "^0.4.4",
     "node-worker-threads-pool": "^1.5.1",

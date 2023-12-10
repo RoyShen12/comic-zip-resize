@@ -20,6 +20,9 @@ dependencies:
   fast-stream-to-buffer:
     specifier: ^1.0.0
     version: 1.0.0
+  get-folder-size:
+    specifier: ^4.0.0
+    version: 4.0.0
   jimp:
     specifier: ^0.22.10
     version: 0.22.10
@@ -1202,6 +1205,18 @@ packages:
 
   /fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
+
+  /gar@1.0.4:
+    resolution: {integrity: sha512-w4n9cPWyP7aHxKxYHFQMegj7WIAsL/YX/C4Bs5Rr8s1H9M1rNtRWRsw+ovYMkXDQ5S4ZbYHsHAPmevPjPgw44w==}
+    dev: false
+
+  /get-folder-size@4.0.0:
+    resolution: {integrity: sha512-Z6sv92povPRhGTNv1j8pMOzkXCcJOYWFTSrulKzoF9qbIRHXtR2Vfjw964jsWVMrIKnwHzm/0jl8IFONbBbEKw==}
+    engines: {node: '>=14.13.0'}
+    hasBin: true
+    dependencies:
+      gar: 1.0.4
+    dev: false
 
   /gifwrap@0.10.1:
     resolution: {integrity: sha512-2760b1vpJHNmLzZ/ubTtNnEx5WApN/PYWJvXvgS+tL1egTTthayFYIQQNi136FLEDcN/IyEY2EcGpIITD6eYUw==}

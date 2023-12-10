@@ -1,8 +1,9 @@
 const { DynamicPool } = require('node-worker-threads-pool')
 
-const { localThread: localThreadsCount } = require('./config')
+const { localThread: localThreadsCount, zipThread } = require('./config')
 const { ResizeMachine, Solution, poolIsIdle, sleep } = require('./util')
 
+const zipPool = new DynamicPool(zipThread)
 const localDynamicPool = localThreadsCount > 0 ? new DynamicPool(localThreadsCount) : null
 /**
  * @type {Map<string, DynamicPool>}
@@ -115,6 +116,9 @@ function closeAllPools() {
 }
 
 module.exports = {
+  getZipPool() {
+    return zipPool
+  },
   getAllUsablePools,
   createRandomPicker,
   closeAllPools,

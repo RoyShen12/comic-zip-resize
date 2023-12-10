@@ -4,6 +4,7 @@ const path = require('path')
 const archiver = require('archiver')
 const chalk = require('chalk')
 const yauzl = require('yauzl')
+const { getZipPool } = require('./threads-helper')
 
 const openZipOpts = {
   autoClose: true,
@@ -309,6 +310,29 @@ function zipDirectory(dir, outputStream, onStartZipping, onWriteFinish) {
   })
 }
 
+/**
+ * @param {string} dir
+ * @param {string} [outputPath]
+ */
+async function zipDirectoryWithThread(dir, outputPath) {
+  if (!outputPath) {
+    outputPath = path.resolve(path.resolve(dir, '..'), `${path.basename(dir)}.zip`)
+    console.log(`zipDirectoryWithThread no outputPath, auto create as ${chalk.yellowBright(outputPath)}`)
+  }
+
+  return getZipPool().exec({
+    task: async ({ dir, outputPath }) => {
+      const { threadId } = require('worker_threads')
+      await require('./src/zip-helper').zipDirectory(dir, require('fs').createWriteStream(outputPath))
+      return threadId
+    },
+    param: {
+      dir,
+      outputPath,
+    },
+  })
+}
+
 module.exports = {
   ZipTreeNode,
   checkZipFile,
@@ -316,4 +340,5 @@ module.exports = {
   travelZipFile,
   getZipTree,
   zipDirectory,
+  zipDirectoryWithThread,
 }

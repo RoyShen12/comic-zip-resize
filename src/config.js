@@ -32,6 +32,7 @@ module.exports = {
     port: 4004,
   },
 
+  zipThread: os.cpus().length,
   localThread: isNodeLargerThan16()
     ? /**sharp */ os.platform() === 'win32'
       ? Math.max(2, Math.round(os.cpus().length / 2) + 1)
