@@ -220,11 +220,13 @@ async function getZipTree(filePath) {
 /**
  * @param {string} filePath
  * @param {(isWellFormed: number) => Promise<void>} onWellFormed
+ * @param {(files: string[]) => void} [fileNameCallback]
  */
-async function checkZipFile(filePath, onWellFormed) {
+async function checkZipFile(filePath, onWellFormed, fileNameCallback) {
   let zipDirCount = 0
+  const files = []
   const closeWrapper = { get: () => {} }
-  for await (const { type } of travelZipFile(filePath, { noStream: true, getForceCloseZip: closeWrapper })) {
+  for await (const { type, entry } of travelZipFile(filePath, { noStream: true, getForceCloseZip: closeWrapper })) {
     if (type === 'dir') {
       zipDirCount++
       if (zipDirCount > 1) {
@@ -249,8 +251,12 @@ async function checkZipFile(filePath, onWellFormed) {
           return false
         }
       }
+    } else {
+      files.push(entry.fileName)
     }
   }
+
+  fileNameCallback?.(files)
   return true
 }
 

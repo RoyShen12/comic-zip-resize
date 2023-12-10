@@ -216,42 +216,56 @@ callRpc(
 
       // check and fix zip structure
       if (
-        !(await checkZipFile(filePath, async (isWellFormed) => {
-          if (noFixZip) return
-          if (!fsModule.existsSync(tempPath)) await fs.mkdir(tempPath, { recursive: true })
+        !(await checkZipFile(
+          filePath,
+          async (isWellFormed) => {
+            if (noFixZip) return
+            if (!fsModule.existsSync(tempPath)) await fs.mkdir(tempPath, { recursive: true })
 
-          const tempUnzipPath = path.resolve(tempPath, 'unzip_temp')
-          await unzip(filePath, tempUnzipPath)
-          if (isWellFormed === ZipTreeNode.WellFormedType.HasRoot) {
-            await moveUpFilesAndDeleteEmptyFolders(tempUnzipPath)
-          } else {
-            await removeAllFiles(tempPath)
-          }
-          // unzip_temp |- a
-          //            |- b
-          const subDirs = (await fs.readdir(tempUnzipPath)).filter((f) => f !== '.DS_Store')
-          const newZipFilePaths = await Promise.all(
-            subDirs.map(async (subDir) => {
-              const subPath = path.resolve(tempUnzipPath, subDir)
-              const outPath = await zipDirectory(subPath)
-              // clean unzipped files
-              await fs.rm(subPath, { recursive: true, force: true })
-              // move to origin path
-              const outPathParsed = path.parse(outPath)
-              const originFileName = filePathParsed.name
-              const insert = originFileName.normalize('NFC') === outPathParsed.name.normalize('NFC') ? '[rezip]' : ''
-              const newFilePath = path.resolve(filePath, '..', `${outPathParsed.name}${insert}${outPathParsed.ext}`)
-              await renameEx(outPath, newFilePath)
-              return newFilePath
-            })
-          )
-          await fs.rm(filePath)
-          if (!noResizeMode) {
-            for (const newZipFilePath of newZipFilePaths) {
-              await scanZipFile(newZipFilePath)
+            const tempUnzipPath = path.resolve(tempPath, 'unzip_temp')
+            await unzip(filePath, tempUnzipPath)
+            if (isWellFormed === ZipTreeNode.WellFormedType.HasRoot) {
+              await moveUpFilesAndDeleteEmptyFolders(tempUnzipPath)
+            } else {
+              await removeAllFiles(tempPath)
             }
+            // unzip_temp |- a
+            //            |- b
+            const subDirs = (await fs.readdir(tempUnzipPath)).filter((f) => f !== '.DS_Store')
+            const newZipFilePaths = await Promise.all(
+              subDirs.map(async (subDir) => {
+                const subPath = path.resolve(tempUnzipPath, subDir)
+                const outPath = await zipDirectory(subPath)
+                // clean unzipped files
+                await fs.rm(subPath, { recursive: true, force: true })
+                // move to origin path
+                const outPathParsed = path.parse(outPath)
+                const originFileName = filePathParsed.name
+                const insert = originFileName.normalize('NFC') === outPathParsed.name.normalize('NFC') ? '[rezip]' : ''
+                const newFilePath = path.resolve(filePath, '..', `${outPathParsed.name}${insert}${outPathParsed.ext}`)
+                await renameEx(outPath, newFilePath)
+                return newFilePath
+              })
+            )
+            await fs.rm(filePath)
+            if (!noResizeMode) {
+              for (const newZipFilePath of newZipFilePaths) {
+                await scanZipFile(newZipFilePath)
+              }
+            }
+          },
+          (files) => {
+            console.log(
+              files
+                .map((f) => path.parse(f).ext)
+                .reduce((p, c) => {
+                  if (!p.has(c)) p.set(c, 1)
+                  else p.set(c, p.get(c) + 1)
+                  return p
+                }, new Map())
+            )
           }
-        }))
+        ))
       ) {
         return
       }
