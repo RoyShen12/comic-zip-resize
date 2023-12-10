@@ -1,7 +1,7 @@
 const { DynamicPool } = require('node-worker-threads-pool')
 
 const { localThread: localThreadsCount, zipThread } = require('./config')
-const { ResizeMachine, Solution, poolIsIdle, sleep } = require('./util')
+const { ResizeMachine, poolIsIdle, sleep } = require('./util')
 
 const zipPool = new DynamicPool(zipThread)
 const localDynamicPool = localThreadsCount > 0 ? new DynamicPool(localThreadsCount) : null
@@ -53,7 +53,7 @@ const createRandomPicker = (remoteServer) => {
       return remoteServer.find((srv) => srv.ip === ip)?.threads
     }),
   ]
-  const randomMachine = new Solution(threadWeight)
+  const randomMachine = new (require('./util').Solution)(threadWeight)
 
   /**
    * @returns {{pool: DynamicPool | null; mark: number; remoteIndex?: number; ip?: string; port?: number}}
