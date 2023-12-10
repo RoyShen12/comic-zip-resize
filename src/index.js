@@ -27,6 +27,7 @@ const {
   renameEx,
   pathToHighlight,
   hasDuplicates,
+  formatMap,
 } = require('./util')
 const { createRandomPicker, closeAllPools, choosePool } = require('./threads-helper')
 
@@ -255,15 +256,20 @@ callRpc(
             }
           },
           (files) => {
-            console.log(
-              files
-                .map((f) => path.parse(f).ext)
-                .reduce((p, c) => {
-                  if (!p.has(c)) p.set(c, 1)
-                  else p.set(c, p.get(c) + 1)
-                  return p
-                }, new Map())
-            )
+            if (!silenceMode) {
+              console.log(
+                `zip inside file ext map`,
+                formatMap(
+                  files
+                    .map((f) => path.parse(f).ext)
+                    .reduce((p, c) => {
+                      if (!p.has(c)) p.set(c, 1)
+                      else p.set(c, p.get(c) + 1)
+                      return p
+                    }, new Map())
+                )
+              )
+            }
           }
         ))
       ) {

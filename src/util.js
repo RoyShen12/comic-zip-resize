@@ -41,6 +41,14 @@ async function jimpReadImage(source, maxRetries = MAX_RETRY) {
 module.exports = {
   Solution: require('./random-with-weight'),
   ServerInfo: require('./server-info'),
+  formatMap(myMap) {
+    let result = ''
+    for (let [key, value] of myMap.entries()) {
+      result += `{ ${key} => ${value} }, `
+    }
+    // 移除最后一个逗号和空格
+    return result.slice(0, -2)
+  },
   quit: function (msg = 'error & quit', code = 2) {
     console.log(chalk.redBright(msg))
     process.exit(code)
