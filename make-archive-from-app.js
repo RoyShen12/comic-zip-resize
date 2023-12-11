@@ -56,6 +56,11 @@ const fs = fsModule.promises
 
             taskList.push(
               (async () => {
+                if (fsModule.existsSync(destFile)) {
+                  console.log(`${chalk.yellowBright(destFile)} zip skipped`)
+                  return
+                }
+
                 console.log(`${chalk.blueBright(destFile)} zip start`)
                 const threadId = await zipDirectoryWithThread(dayPath, destFile)
                 console.log(`[${chalk.bold(chalk.whiteBright(threadId))}] ${chalk.greenBright(destFile)} zip finish`)
