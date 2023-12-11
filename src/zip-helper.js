@@ -57,10 +57,10 @@ async function* travelZipFile(filePath, options) {
            * @param {yauzl.Entry} entry
            */
           (entry) => {
-            const fileNameRaw = Buffer.from(entry.fileName, 'binary')
-            const r = chardet.detect(fileNameRaw)
-            console.log('chardet.detect', r)
-            console.log('iconv.decode', iconv.decode(fileNameRaw, 'windows-1252'))
+            // const fileNameRaw = Buffer.from(entry.fileName, 'binary')
+            // const r = chardet.detect(fileNameRaw)
+            // console.log('chardet.detect', r)
+            // console.log('iconv.decode', iconv.decode(fileNameRaw, 'windows-1252'))
             entry.fileName = entry.fileName.normalize('NFC')
             console.log(`travelZipFile.readEntry.entry.fileName: ${entry.fileName}`)
             if (/\/$/.test(entry.fileName)) {
