@@ -58,14 +58,14 @@ async function scanZipFile(filePath) {
     }, {})
   const fileExtList = Object.keys(fileExtDict)
   if (fileExtList.length > 1 || fileExtList[0] !== '.jpg') {
-    console.log(
-      `[${fileIndex}] ${filePath}.fileList length ${chalk.bold(fileList.length)}\nextensions: ${inspect(
-        fileExtDict,
-        false,
-        Infinity,
-        true
-      )}`
-    )
+    // console.log(
+    //   `[${fileIndex}] ${filePath}.fileList length ${chalk.bold(fileList.length)}\nextensions: ${inspect(
+    //     fileExtDict,
+    //     false,
+    //     Infinity,
+    //     true
+    //   )}`
+    // )
   }
 
   // const fileBaseName = path.basename(filePath)

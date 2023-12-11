@@ -58,17 +58,25 @@ async function* travelZipFile(filePath, options) {
            */
           (entry) => {
             if (process.argv.includes('--debug-zip')) {
-              const reverseEncoding = 'ascii'
-              const fileNameRaw = Buffer.from(entry.fileName, reverseEncoding)
-              const r = chardet.detect(fileNameRaw)
-              console.log(`filename reverse by ${reverseEncoding}, chardet.detect result:`, r)
-              const toEncoding = 'windows-1252'
-              console.log(`iconv.decode -> ${toEncoding}:`, iconv.decode(fileNameRaw, toEncoding))
+              ;['binary', 'ascii', 'utf8', 'utf16le'].forEach((reverseEncoding) => {
+                console.log(`filename reverse by ${reverseEncoding}`)
+                // @ts-ignore
+                const fileNameRaw = Buffer.from(entry.fileName, reverseEncoding)
+                const r = chardet.detect(fileNameRaw)
+                console.log(fileNameRaw.toString('hex'), `chardet.detect result:`, r)
+                // @ts-ignore
+                console.log(`iconv.decode -> ${r}:`, iconv.decode(fileNameRaw, r))
+                console.log(`iconv.decode -> GBK:`, iconv.decode(fileNameRaw, 'GBK'))
+                console.log(`iconv.decode -> gb2312:`, iconv.decode(fileNameRaw, 'gb2312'))
+                console.log(`iconv.decode -> UTF-8:`, iconv.decode(fileNameRaw, 'UTF-8'))
+              })
             }
 
             entry.fileName = entry.fileName.normalize('NFC')
 
-            if (process.argv.includes('--debug-zip')) console.log(`travelZipFile.readEntry.entry.fileName: ${entry.fileName}`)
+            if (process.argv.includes('--debug-zip')) {
+              console.log(`travelZipFile.readEntry.entry.fileName: ${entry.fileName}`)
+            }
 
             if (/\/$/.test(entry.fileName)) {
               resolve([entry, 'dir'])
