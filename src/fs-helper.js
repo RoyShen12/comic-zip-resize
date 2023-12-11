@@ -12,9 +12,9 @@ module.exports = {
       (await fs.readdir(dir, { withFileTypes: true })).filter((subF) => subF.isFile()).map((subF) => fs.rm(path.resolve(dir, subF.name)))
     )
   },
-  // $ mv /my/path/*/* /my/path  # 将所有 dir 下子目录中的所有内容移动到 dir 下
-  // $ find /my/path/* -type d -empty -delete  # 删除 dir 的所有空子目录
   /**
+   * - $ mv /my/path/🌟/🌟 /my/path  # 将所有 dir 下子目录中的所有内容移动到 dir 下
+   * - $ find /my/path/🌟 -type d -empty -delete  # 删除 dir 的所有空子目录
    * @param {string} dir
    */
   async moveUpFilesAndDeleteEmptyFolders(dir) {

@@ -17,9 +17,6 @@ dependencies:
   chalk:
     specifier: '4'
     version: 4.1.2
-  chardet:
-    specifier: ^2.0.0
-    version: 2.0.0
   fast-stream-to-buffer:
     specifier: ^1.0.0
     version: 1.0.0
@@ -35,6 +32,9 @@ dependencies:
   jpeg-js:
     specifier: ^0.4.4
     version: 0.4.4
+  jschardet:
+    specifier: ^3.0.0
+    version: 3.0.0
   node-worker-threads-pool:
     specifier: ^1.5.1
     version: 1.5.1
@@ -921,10 +921,6 @@ packages:
       ansi-styles: 4.3.0
       supports-color: 7.2.0
 
-  /chardet@2.0.0:
-    resolution: {integrity: sha512-xVgPpulCooDjY6zH4m9YW3jbkaBe3FKIAvF5sj5t7aBNsVl2ljIE+xwJ4iNgiDZHFQvNIpjdKdVOQvvk5ZfxbQ==}
-    dev: false
-
   /color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
     engines: {node: '>=7.0.0'}
@@ -1397,6 +1393,11 @@ packages:
     dependencies:
       argparse: 2.0.1
     dev: true
+
+  /jschardet@3.0.0:
+    resolution: {integrity: sha512-lJH6tJ77V8Nzd5QWRkFYCLc13a3vADkh3r/Fi8HupZGWk2OVVDfnZP8V/VgQgZ+lzW0kG2UGb5hFgt3V3ndotQ==}
+    engines: {node: '>=0.1.90'}
+    dev: false
 
   /json-buffer@3.0.1:
     resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}

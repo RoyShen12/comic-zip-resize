@@ -41,6 +41,15 @@ async function jimpReadImage(source, maxRetries = MAX_RETRY) {
 module.exports = {
   Solution: require('./random-with-weight'),
   ServerInfo: require('./server-info'),
+  makeExtDict(fileList) {
+    return fileList
+      .map((f) => path.parse(f).ext)
+      .reduce((p, c) => {
+        if (!p[c]) p[c] = 1
+        else p[c] = p[c] + 1
+        return p
+      }, {})
+  },
   formatMap(myMap) {
     let result = ''
     for (let [key, value] of myMap.entries()) {
@@ -93,7 +102,7 @@ module.exports = {
               kernel: 'lanczos3',
             })
             .jpeg({
-              quality: 80,
+              quality: 86,
             })
           // @ts-ignore
           return writeDestPath ? await resizedSharpInst.toFile(writeDestPath) : await resizedSharpInst.toBuffer()

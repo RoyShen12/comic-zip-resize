@@ -229,6 +229,7 @@ callRpc(
             if (isWellFormed === ZipTreeNode.WellFormedType.HasRoot) {
               await moveUpFilesAndDeleteEmptyFolders(tempUnzipPath)
             } else {
+              // 删除遍历中已经 resize 了的输出文件
               await removeAllFiles(tempPath)
             }
             // unzip_temp |- a
