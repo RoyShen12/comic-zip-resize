@@ -283,7 +283,7 @@ function zipDirectory(dir, outputStream, onStartZipping, onWriteFinish) {
     })
 
     outputStream.on('error', (err) => {
-      console.log(chalk.redBright('archive on write stream error'))
+      console.log(chalk.redBright(`archive ${dir} on write stream error`))
       console.error(err)
       rej(err)
     })
@@ -294,14 +294,14 @@ function zipDirectory(dir, outputStream, onStartZipping, onWriteFinish) {
 
     archive.on('warning', (err) => {
       if (err.code === 'ENOENT') {
-        console.log(chalk.redBright('archive on warning: ENOENT'))
+        console.log(chalk.redBright(`archive ${dir} on warning: ENOENT`))
         console.error(err)
       } else {
         rej(err)
       }
     })
     archive.on('error', (err) => {
-      console.log(chalk.redBright('archive on error'))
+      console.log(chalk.redBright(`archive ${dir} on error`))
       console.error(err)
       rej(err)
     })
