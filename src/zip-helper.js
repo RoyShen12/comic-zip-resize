@@ -57,12 +57,19 @@ async function* travelZipFile(filePath, options) {
            * @param {yauzl.Entry} entry
            */
           (entry) => {
-            // const fileNameRaw = Buffer.from(entry.fileName, 'binary')
-            // const r = chardet.detect(fileNameRaw)
-            // console.log('chardet.detect', r)
-            // console.log('iconv.decode', iconv.decode(fileNameRaw, 'windows-1252'))
+            if (process.argv.includes('--debug-zip')) {
+              const reverseEncoding = 'ascii'
+              const fileNameRaw = Buffer.from(entry.fileName, reverseEncoding)
+              const r = chardet.detect(fileNameRaw)
+              console.log(`filename reverse by ${reverseEncoding}, chardet.detect result:`, r)
+              const toEncoding = 'windows-1252'
+              console.log(`iconv.decode -> ${toEncoding}:`, iconv.decode(fileNameRaw, toEncoding))
+            }
+
             entry.fileName = entry.fileName.normalize('NFC')
-            // console.log(`travelZipFile.readEntry.entry.fileName: ${entry.fileName}`)
+
+            if (process.argv.includes('--debug-zip')) console.log(`travelZipFile.readEntry.entry.fileName: ${entry.fileName}`)
+
             if (/\/$/.test(entry.fileName)) {
               resolve([entry, 'dir'])
             } else {

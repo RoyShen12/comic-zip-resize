@@ -16,7 +16,7 @@ const silenceMode = process.argv.includes('--silence')
 
 /**
  * 1. Rezip bad file name encoding zip
- * 2. transform *.png, *.bmp, *.JPG to standard sharp.JPEG
+ * 2. transform *.png, *.bmp, *.JPG, *.webm, *.webp to standard sharp.JPEG
  * 3. remove useless *.url, *.db, *.txt ...
  */
 async function scanDirectory(pathParam) {
