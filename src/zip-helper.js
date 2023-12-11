@@ -62,7 +62,7 @@ async function* travelZipFile(filePath, options) {
             // console.log('chardet.detect', r)
             // console.log('iconv.decode', iconv.decode(fileNameRaw, 'windows-1252'))
             entry.fileName = entry.fileName.normalize('NFC')
-            console.log(`travelZipFile.readEntry.entry.fileName: ${entry.fileName}`)
+            // console.log(`travelZipFile.readEntry.entry.fileName: ${entry.fileName}`)
             if (/\/$/.test(entry.fileName)) {
               resolve([entry, 'dir'])
             } else {
