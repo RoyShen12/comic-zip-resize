@@ -4,7 +4,9 @@ const path = require('path')
 const archiver = require('archiver')
 const chalk = require('chalk')
 const yauzl = require('yauzl')
-const { getZipPool } = require('./threads-helper')
+
+const chardet = require('chardet')
+const iconv = require('iconv-lite')
 
 const openZipOpts = {
   autoClose: true,
@@ -49,13 +51,25 @@ async function* travelZipFile(filePath, options) {
     new Promise((resolve) => {
       zipFile
         .removeAllListeners('end')
-        .once('entry', (entry) => {
-          if (/\/$/.test(entry.fileName)) {
-            resolve([entry, 'dir'])
-          } else {
-            resolve([entry, 'file'])
+        .once(
+          'entry',
+          /**
+           * @param {yauzl.Entry} entry
+           */
+          (entry) => {
+            const fileNameRaw = Buffer.from(entry.fileName, 'binary')
+            const r = chardet.detect(fileNameRaw)
+            console.log('chardet.detect', r)
+            console.log('iconv.decode', iconv.decode(fileNameRaw, 'windows-1252'))
+            entry.fileName = entry.fileName.normalize('NFC')
+            console.log(`travelZipFile.readEntry.entry.fileName: ${entry.fileName}`)
+            if (/\/$/.test(entry.fileName)) {
+              resolve([entry, 'dir'])
+            } else {
+              resolve([entry, 'file'])
+            }
           }
-        })
+        )
         .once('end', () => {
           resolve(undefined)
         })
@@ -72,7 +86,6 @@ async function* travelZipFile(filePath, options) {
       break
     }
     const [entry, type] = entryRes
-    entry.fileName = entry.fileName.normalize('NFC')
     /**
      * @type {{type: 'dir' | 'file', entry: yauzl.Entry, fileStream?: import('stream').Readable}}
      */
@@ -156,6 +169,23 @@ class ZipTreeNode {
    */
   getChild(name) {
     return this.children?.find((c) => c.name === name)
+  }
+  /**
+   * Get all file nodes
+   * @returns {string[]}
+   */
+  getAllFiles() {
+    let result = []
+
+    if (this.isFile()) {
+      result.push(this.name)
+    } else if (this.isDirectory()) {
+      this.children?.forEach((child) => {
+        result = result.concat(child.getAllFiles())
+      })
+    }
+
+    return result
   }
   print(indent = '', prefix = '') {
     console.log(`${indent}${prefix}${this.name}`)
@@ -326,17 +356,19 @@ async function zipDirectoryWithThread(dir, outputPath) {
     console.log(`zipDirectoryWithThread no outputPath, auto create as ${chalk.yellowBright(outputPath)}`)
   }
 
-  return getZipPool().exec({
-    task: async ({ dir, outputPath }) => {
-      const { threadId } = require('worker_threads')
-      await require('./src/zip-helper').zipDirectory(dir, require('fs').createWriteStream(outputPath))
-      return threadId
-    },
-    param: {
-      dir,
-      outputPath,
-    },
-  })
+  return require('./threads-helper')
+    .getZipPool()
+    .exec({
+      task: async ({ dir, outputPath }) => {
+        const { threadId } = require('worker_threads')
+        await require('./src/zip-helper').zipDirectory(dir, require('fs').createWriteStream(outputPath))
+        return threadId
+      },
+      param: {
+        dir,
+        outputPath,
+      },
+    })
 }
 
 module.exports = {

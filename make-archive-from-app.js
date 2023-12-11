@@ -2,10 +2,9 @@ const fsModule = require('fs')
 const path = require('path')
 
 const chalk = require('chalk')
-const { zipDirectory, zipDirectoryWithThread } = require('./src/zip-helper')
+const { zipDirectoryWithThread } = require('./src/zip-helper')
 const { getZipPool } = require('./src/threads-helper')
 
-const { createWriteStream } = fsModule
 const fs = fsModule.promises
 
 ;(async () => {
