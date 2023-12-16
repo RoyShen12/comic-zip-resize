@@ -14,6 +14,7 @@ const { getZipTree, makeExtDict, rezipFile, moveUpFilesAndDeleteEmptyFolders } =
 
 const workingDir = process.argv[2]
 const silenceMode = process.argv.includes('--silence')
+const noFixZip = process.argv.includes('--no-fix-zip')
 
 async function scanDirectory(pathParam) {
   if (!silenceMode) console.log(`scan dir: ${chalk.blueBright(pathParam)}`)
@@ -77,7 +78,7 @@ async function scanZipFile(filePath) {
     console.log(`[${fileIndex}] ${chalk.cyanBright(path.parse(filePath).base)} ${chalk.yellowBright('has MacOS special dir')}`)
   }
 
-  if (modifyFlag) {
+  if (modifyFlag && !noFixZip) {
     console.log(chalk.yellowBright(chalk.bold(`get modifyFlag, will rezip ${filePath}`)))
 
     const id = uuidV4()
@@ -109,13 +110,13 @@ async function scanZipFile(filePath) {
         },
         async transformFile(filePath) {
           const parsedFileName = path.parse(filePath)
-          // remove *.url, *.db, *.txt
+          // [remove] *.url, *.db, *.txt
           const trashExt = ['.url', '.db', '.txt']
-          if (trashExt.some((e) => parsedFileName.ext === e)) {
+          if (trashExt.some((e) => parsedFileName.ext === e) || parsedFileName.name.startsWith('.')) {
             console.log(`transformFile do rm to ${filePath}`)
             await fs.rm(filePath)
           }
-          // transform *.png, *.bmp, *.JPG, *.webm, *.webp to standard sharp.JPEG
+          // [transform] *.png, *.bmp, *.JPG, *.webm, *.webp to standard sharp.JPEG
           const badImgExt = ['.JPG', ...['.png', '.bmp', '.webm', '.webp'].map((e) => [e, e.toUpperCase()]).flat()]
           if (badImgExt.some((e) => parsedFileName.ext === e)) {
             console.log(`transformFile do transform JPEG to ${filePath}`)

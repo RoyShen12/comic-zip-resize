@@ -108,10 +108,11 @@ async function* travelZipFile(filePath, options) {
               // @ts-ignore
               entry.fileName = iconv.decode(entry.fileName, decoder).normalize('NFC')
 
+              const isDir = /\/$/.test(entry.fileName)
               console.log(
-                `(encoding) ${chalk.magentaBright('jschardet:')} ${chalk.greenBright(jschardetRes.encoding)}@${chalk.yellowBright(
-                  jschardetRes.confidence.toFixed(3)
-                )} ${chalk.yellowBright(
+                `(encoding) [${isDir ? 'D' : 'F'}] ${chalk.magentaBright('jschardet:')} ${chalk.greenBright(
+                  jschardetRes.encoding
+                )}@${chalk.yellowBright(jschardetRes.confidence.toFixed(3))} ${chalk.yellowBright(
                   `yauzl.isUTF8?:${chalk.bold(String(isUtf8))}, use decoder: ${chalk.bold(decoder)}, content: ${chalk.bold(
                     entry.fileName
                   )} (content@${jschardetRes.encoding}:${chalk.gray(tryJschardet)}|content@utf8:${chalk.gray(tryUtf8)})`
