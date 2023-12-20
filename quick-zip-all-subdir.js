@@ -11,29 +11,29 @@ if (!workingDir) {
 }
 
 // 在当前目录获取子目录
-const dirs = fs
+const subDirs = fs
   .readdirSync(workingDir, { withFileTypes: true })
   .filter((dirent) => dirent.isDirectory())
   .map((dirent) => dirent.name)
 
 ;(async () => {
   await Promise.all(
-    dirs.map(async (dir) => {
-      const dirPath = path.join(workingDir, dir)
+    subDirs.map(async (subDir) => {
+      const subDirPath = path.join(workingDir, subDir)
       // check dir inside is all file
-      if ((await fs.promises.readdir(dirPath, { withFileTypes: true })).some((fd) => !fd.isFile())) {
-        return console.error(chalk.redBright(`some in ${dirPath} is not file!`))
+      if ((await fs.promises.readdir(subDirPath, { withFileTypes: true })).some((fd) => !fd.isFile())) {
+        return console.error(chalk.redBright(`some in ${subDirPath} is not file!`))
       }
 
       await zipDirectory(
-        dirPath,
-        fs.createWriteStream(path.join(workingDir, dir + '.zip'), {
+        subDirPath,
+        fs.createWriteStream(path.join(workingDir, subDir + '.zip'), {
           highWaterMark: 1024 * 1024 * 16,
         }),
         undefined,
         async (pointer) => {
           console.log((pointer / 1024 / 1024).toFixed(1) + ' total M bytes')
-          await fs.promises.rm(dirPath, { recursive: true })
+          await fs.promises.rm(subDirPath, { recursive: true })
         }
       )
     })
