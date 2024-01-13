@@ -10,8 +10,13 @@ const fs = fsModule.promises
 ;(async () => {
   const getFolderSize = (await import('get-folder-size')).default
 
-  const workingDir = process.argv[2] || 'C:\\Users\\RoyShen\\Downloads\\bika_v1.4.3_windows_x64\\DL\\commies'
-  const pixivOutPath = process.argv[3] || 'Y:\\未整理'
+  const workingDir = process.argv[2]
+  const pixivOutPath = process.argv[3]
+
+  if (!workingDir) {
+    console.error('cannot find workingDir (argv[2])')
+    process.exit(-1)
+  }
 
   console.log(`working dir: ${chalk.whiteBright(workingDir)}\n`)
 
@@ -23,6 +28,10 @@ const fs = fsModule.promises
     (await fs.stat(pixivPath)).isDirectory() &&
     fsModule.existsSync(path.resolve(workingDir, '.sync'))
   ) {
+    if (!pixivOutPath) {
+      console.error('cannot find pixivOutPath (argv[3])')
+      process.exit(-1)
+    }
     // is pixiv daily top50
 
     /**
@@ -79,7 +88,7 @@ const fs = fsModule.promises
         const seriesPath = path.resolve(workingDir, seriesName)
 
         // is dir
-        if (!(await fs.stat(seriesPath)).isDirectory()) {
+        if (!(await fs.stat(seriesPath)).isDirectory() && seriesName !== '.DS_Store') {
           console.error(chalk.redBright(`meet node ${chalk.bold(seriesPath)} is not a dir`))
           process.exit(1)
         }
