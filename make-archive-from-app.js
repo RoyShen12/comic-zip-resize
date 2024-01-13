@@ -87,10 +87,14 @@ const fs = fsModule.promises
       seriesDirs.map(async (seriesName) => {
         const seriesPath = path.resolve(workingDir, seriesName)
 
-        // is dir
-        if (!(await fs.stat(seriesPath)).isDirectory() && seriesName !== '.DS_Store') {
-          console.error(chalk.redBright(`meet node ${chalk.bold(seriesPath)} is not a dir`))
-          process.exit(1)
+        // is not dir
+        if (!(await fs.stat(seriesPath)).isDirectory()) {
+          if (seriesName === '.DS_Store') {
+            await fs.unlink(seriesPath)
+          } else {
+            console.error(chalk.redBright(`meet node ${chalk.bold(seriesPath)} is not a dir`))
+            process.exit(1)
+          }
         }
 
         const waifuPath = path.resolve(seriesPath, 'waifu2x')
