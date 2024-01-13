@@ -90,7 +90,7 @@ const fs = fsModule.promises
         // is not dir
         if (!(await fs.stat(seriesPath)).isDirectory()) {
           if (seriesName === '.DS_Store') {
-            await fs.unlink(seriesPath)
+            return fs.unlink(seriesPath)
           } else {
             console.error(chalk.redBright(`meet node ${chalk.bold(seriesPath)} is not a dir`))
             process.exit(1)
