@@ -23,6 +23,9 @@ const fs = fsModule.promises
   const seriesDirs = await fs.readdir(workingDir)
   const pixivPath = path.resolve(workingDir, 'pixiv')
 
+  // =====================================================
+  // ==================== Pixiv Daily ====================
+  // =====================================================
   if (
     fsModule.existsSync(pixivPath) &&
     (await fs.stat(pixivPath)).isDirectory() &&
@@ -82,6 +85,9 @@ const fs = fsModule.promises
     await Promise.all(taskList)
 
     console.log('finish')
+    // =====================================================
+    // ==================== Pika / Jm ======================
+    // =====================================================
   } else {
     await Promise.all(
       seriesDirs.map(async (seriesName) => {
